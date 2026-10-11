@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>科學計算機</title>
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <link rel="apple-touch-icon" sizes="512x512" href="icon-512.png">
+    <meta name="apple-mobile-web-app-title" content="科學計算機">
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#aab5c2">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <script src="mathlive.min.js"></script>
+    <script src="compute-engine.min.js"></script>
+</head>
+<body>
+    <div class="calculator">
+        <!-- 螢幕 -->
+        <div class="screen-wrapper">
+            <div class="screen">
+                <div class="indicators">
+                    <span class="ind-s">S</span><span class="ind-a">A</span><span>M</span><span>STO</span><span>RCL</span><span>STAT</span><span>CMPLX</span><span>MAT</span><span>VCT</span><span class="ind-d" id="ind-d" title="角度單位：度 (DEG)，點擊切換">D</span><span class="ind-r" id="ind-r" title="角度單位：弧度 (RAD)，點擊切換">R</span><span class="ind-g" id="ind-g" title="角度單位：百分度 (GRA)，點擊切換">G</span><span>FIX</span><span>SCI</span><span class="ind-math" id="ind-math" title="永久預設輸出模式：自然分數 (Math 啟用) / 小數 (Math 關閉)，點擊切換">Math</span><span class="ind-left">◀</span><span class="ind-up">▲</span><span class="ind-down">▼</span><span class="ind-right">▶</span>
+                </div>
+                <math-field class="expression" id="expression" inputmode="none" math-virtual-keyboard-policy="manual"></math-field>
+                <div class="result-viewport" id="result-viewport">
+                    <math-field class="result" id="result" read-only></math-field>
+                </div>
+            </div>
+        </div>
+
+        <!-- 按鈕區 -->
+        <div class="button-area">
+            <!-- 頂部不規則按鈕區 (方向鍵附近) -->
+            <div class="top-buttons">
+                <div class="left-funcs">
+                    <div class="btn-wrap">
+                        <div class="btn-labels"><span class="lbl-yellow lbl-center">SHIFT</span></div>
+                        <button class="btn func-btn" data-val="shift">SHIFT</button>
+                    </div>
+                    <div class="btn-wrap">
+                        <div class="btn-labels"><span class="lbl-gray lbl-center">ALPHA</span></div>
+                        <button class="btn func-btn" data-val="alpha">ALPHA</button>
+                    </div>
+                    <div class="btn-wrap">
+                        <div class="btn-labels"><span class="lbl-yellow">SOLVE</span><span class="lbl-red">=</span></div>
+                        <button class="btn func-btn" data-val="calc">CALC</button>
+                    </div>
+                    <div class="btn-wrap">
+                        <div class="btn-labels"><span class="lbl-yellow">d/dx</span><span class="lbl-red">:</span></div>
+                        <button class="btn func-btn" data-val="integral">\(\int \Box dx\)</button>
+                    </div>
+                </div>
+                
+                <div class="d-pad">
+                    <div class="d-up">▲</div>
+                    <div class="d-left">◀</div>
+                    <div class="d-right">▶</div>
+                    <div class="d-down">▼</div>
+                    <div class="d-center"></div>
+                </div>
+
+                <div class="right-funcs">
+                    <div class="btn-wrap">
+                        <div class="btn-labels"><span class="lbl-yellow lbl-center">SETUP</span></div>
+                        <button class="btn func-btn" data-val="mode">MODE</button>
+                    </div>
+                    <div class="btn-wrap">
+                        <div class="btn-labels"></div>
+                        <button class="btn func-btn on-btn" data-val="on">ON</button>
+                    </div>
+                    <div class="btn-wrap">
+                        <div class="btn-labels"><span class="lbl-yellow lbl-center">x!</span></div>
+                        <button class="btn func-btn" data-val="inv">\(x^{-1}\)</button>
+                    </div>
+                    <div class="btn-wrap">
+                        <div class="btn-labels"><span class="lbl-gray lbl-center">∑</span></div>
+                        <button class="btn func-btn" data-val="logbase">\(\log_\Box \Box\)</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 工程計算按鈕區 (6欄) -->
+            <div class="sci-buttons">
+                <div class="btn-wrap">
+                    <div class="btn-labels"><span class="lbl-yellow lbl-center">d/c</span></div>
+                    <button class="btn sci-btn" data-val="frac">\(\frac{\Box}{\Box}\)</button>
+                </div>
+                <div class="btn-wrap">
+                    <div class="btn-labels"><span class="lbl-yellow lbl-center">∛</span></div>
+                    <button class="btn sci-btn" data-val="sqrt">\(\sqrt{\Box}\)</button>
+                </div>
+                <div class="btn-wrap">
+                    <div class="btn-labels"><span class="lbl-yellow lbl-center">x³</span></div>
+                    <button class="btn sci-btn" data-val="sqr">\(x^2\)</button>
+                </div>
+                <div class="btn-wrap">
+                    <div class="btn-labels"><span class="lbl-yellow lbl-center">ˣ√</span></div>
+                    <button class="btn sci-btn" data-val="pow">\(x^\Box\)</button>
+                </div>
+                <div class="btn-wrap">
+                    <div class="btn-labels"><span class="lbl-yellow lbl-center">10ˣ</span></div>
+                    <button class="btn sci-btn" data-val="log">log</button>
+                </div>
+                <div class="btn-wrap">
+                    <div class="btn-labels"><span class="lbl-yellow lbl-center">eˣ</span></div>
+                    <button class="btn sci-btn" data-val="ln">ln</button>
+                </div>
+                
+                <div class="btn-wrap">
+                    <div class="btn-labels"><span class="lbl-gray">∠</span><span class="lbl-red">A</span></div>
+                    <button class="btn sci-btn" data-val="minus">(-)</button>
+                </div>
+                <div class="btn-wrap">
+                    <div class="btn-labels"><span class="lbl-gray">←</span><span class="lbl-red">B</span></div>
+                    <button class="btn sci-btn" data-val="deg">°'”</button>
+                </div>
+                <div class="btn-wrap">
+                    <div class="btn-labels"><span class="lbl-red">C</span></div>
+                    <button class="btn sci-btn" data-val="hyp">hyp</button>
+                </div>
+                <div class="btn-wrap">
+                    <div class="btn-labels"><span class="lbl-yellow">sin⁻¹</span><span class="lbl-red">D</span></div>
+                    <button class="btn sci-btn" data-val="sin">sin</button>
+                </div>
+                <div class="btn-wrap">
+                    <div class="btn-labels"><span class="lbl-yellow">cos⁻¹</span><span class="lbl-red">E</span></div>
+                    <button class="btn sci-btn" data-val="cos">cos</button>
+                </div>
+                <div class="btn-wrap">
+                    <div class="btn-labels"><span class="lbl-yellow">tan⁻¹</span><span class="lbl-red">F</span></div>
+                    <button class="btn sci-btn" data-val="tan">tan</button>
+                </div>
+                
+                <div class="btn-wrap">
+                    <div class="btn-labels"><span class="lbl-yellow lbl-center">STO</span></div>
+                    <button class="btn sci-btn" data-val="rcl">RCL</button>
+                </div>
+                <div class="btn-wrap">
+                    <div class="btn-labels"><span class="lbl-gray">←</span><span class="lbl-red">i</span></div>
+                    <button class="btn sci-btn" data-val="eng">ENG</button>
+                </div>
+                <div class="btn-wrap">
+                    <div class="btn-labels"><span class="lbl-yellow lbl-center">%</span></div>
+                    <button class="btn sci-btn" data-val="lparen">(</button>
+                </div>
+                <div class="btn-wrap">
+                    <div class="btn-labels"><span class="lbl-yellow">,</span><span class="lbl-red">X</span></div>
+                    <button class="btn sci-btn" data-val="rparen">)</button>
+                </div>
+                <div class="btn-wrap">
+                    <div class="btn-labels"><span class="lbl-yellow">aᵇ/c</span><span class="lbl-red">Y</span></div>
+                    <button class="btn sci-btn" data-val="sd">S⇔D</button>
+                </div>
+                <div class="btn-wrap">
+                    <div class="btn-labels"><span class="lbl-yellow">M-</span><span class="lbl-red">M</span></div>
+                    <button class="btn sci-btn" data-val="mplus">M+</button>
+                </div>
+            </div>
+
+            <!-- 數字與運算按鈕區 (5欄) -->
+            <div class="num-buttons">
+                <div class="btn-wrap">
+                    <div class="btn-labels"><span class="lbl-gray lbl-center">CONST</span></div>
+                    <button class="btn num-btn" data-val="7">7</button>
+                </div>
+                <div class="btn-wrap">
+                    <div class="btn-labels"><span class="lbl-gray lbl-center">CONV</span></div>
+                    <button class="btn num-btn" data-val="8">8</button>
+                </div>
+                <div class="btn-wrap">
+                    <div class="btn-labels"><span class="lbl-gray lbl-center">CLR</span></div>
+                    <button class="btn num-btn" data-val="9">9</button>
+                </div>
+                <div class="btn-wrap">
+                    <div class="btn-labels"><span class="lbl-gray lbl-center">INS</span></div>
+                    <button class="btn del-btn" data-val="del">DEL</button>
+                </div>
+                <div class="btn-wrap">
+                    <div class="btn-labels"><span class="lbl-gray lbl-center">OFF</span></div>
+                    <button class="btn ac-btn" data-val="ac">AC</button>
+                </div>
+                
+                <div class="btn-wrap">
+                    <div class="btn-labels"><span class="lbl-gray lbl-center">MATRIX</span></div>
+                    <button class="btn num-btn" data-val="4">4</button>
+                </div>
+                <div class="btn-wrap">
+                    <div class="btn-labels"><span class="lbl-gray lbl-center">VECTOR</span></div>
+                    <button class="btn num-btn" data-val="5">5</button>
+                </div>
+                <div class="btn-wrap">
+                    <div class="btn-labels"><span class="lbl-gray lbl-center">VERIFY</span></div>
+                    <button class="btn num-btn" data-val="6">6</button>
+                </div>
+                <div class="btn-wrap">
+                    <div class="btn-labels"><span class="lbl-yellow lbl-center">nPr</span></div>
+                    <button class="btn op-btn" data-val="*">×</button>
+                </div>
+                <div class="btn-wrap">
+                    <div class="btn-labels"><span class="lbl-yellow lbl-center">nCr</span></div>
+                    <button class="btn op-btn" data-val="/">÷</button>
+                </div>
+                
+                <div class="btn-wrap">
+                    <div class="btn-labels"><span class="lbl-gray lbl-center">STAT</span></div>
+                    <button class="btn num-btn" data-val="1">1</button>
+                </div>
+                <div class="btn-wrap">
+                    <div class="btn-labels"><span class="lbl-gray lbl-center">CMPLX</span></div>
+                    <button class="btn num-btn" data-val="2">2</button>
+                </div>
+                <div class="btn-wrap">
+                    <div class="btn-labels"><span class="lbl-gray lbl-center">BASE</span></div>
+                    <button class="btn num-btn" data-val="3">3</button>
+                </div>
+                <div class="btn-wrap">
+                    <div class="btn-labels"><span class="lbl-gray lbl-center">Pol</span></div>
+                    <button class="btn op-btn" data-val="+">+</button>
+                </div>
+                <div class="btn-wrap">
+                    <div class="btn-labels"><span class="lbl-gray lbl-center">Rec</span></div>
+                    <button class="btn op-btn" data-val="-">-</button>
+                </div>
+                
+                <div class="btn-wrap">
+                    <div class="btn-labels"><span class="lbl-yellow lbl-center">Rnd</span></div>
+                    <button class="btn num-btn" data-val="0">0</button>
+                </div>
+                <div class="btn-wrap">
+                    <div class="btn-labels labels-ran"><span class="lbl-yellow">Ran#</span><span class="lbl-red">RanI</span></div>
+                    <button class="btn num-btn" data-val=".">.</button>
+                </div>
+                <div class="btn-wrap">
+                    <div class="btn-labels"><span class="lbl-yellow">π</span><span class="lbl-red">e</span></div>
+                    <button class="btn exp-btn" data-val="exp">\(\times 10^x\)</button>
+                </div>
+                <div class="btn-wrap">
+                    <div class="btn-labels"><span class="lbl-yellow lbl-center">DRG▶</span></div>
+                    <button class="btn ans-btn" data-val="ans">Ans</button>
+                </div>
+                <div class="btn-wrap">
+                    <div class="btn-labels"></div>
+                    <button class="btn eq-btn" data-val="=">=</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => {
+                        console.log('Service Worker 註冊成功');
+                        reg.update();
+                    })
+                    .catch(err => console.log('Service Worker 註冊失敗', err));
+            });
+        }
+    </script>
+    <script>
+        window.addEventListener('load', () => {
+            if (window.MathLive && window.MathLive.renderMathInDocument) {
+                window.MathLive.renderMathInDocument();
+            }
+        });
+    </script>
+</body>
+</html>
