@@ -535,3 +535,47 @@ button[data-val="alpha"] {
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
 }
+
+/* PWA 一鍵安裝提示條 */
+.pwa-install-banner {
+    position: fixed;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10000;
+    background: #1e293b;
+    color: #f8fafc;
+    padding: 8px 14px;
+    border-radius: 24px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    animation: fadeInDown 0.3s ease;
+}
+.pwa-install-banner button#pwa-install-btn {
+    background: #2563eb;
+    color: #ffffff;
+    border: none;
+    padding: 5px 12px;
+    border-radius: 14px;
+    font-size: 12px;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.4);
+}
+.pwa-install-banner button#pwa-install-close {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    font-size: 15px;
+    cursor: pointer;
+    padding: 0 4px;
+    line-height: 1;
+}
+@keyframes fadeInDown {
+    from { opacity: 0; transform: translate(-50%, -10px); }
+    to { opacity: 1; transform: translate(-50%, 0); }
+}

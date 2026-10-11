@@ -1811,3 +1811,40 @@ const attachDPad = () => {
     });
 };
 attachDPad();
+
+// PWA 一鍵安裝提示條監聽
+let deferredPrompt = null;
+const installBanner = document.getElementById('pwa-install-banner');
+const installBtn = document.getElementById('pwa-install-btn');
+const installClose = document.getElementById('pwa-install-close');
+
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    if (installBanner) {
+        installBanner.style.display = 'flex';
+    }
+});
+
+if (installBtn) {
+    installBtn.addEventListener('click', async () => {
+        if (!deferredPrompt) return;
+        if (installBanner) installBanner.style.display = 'none';
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        console.log('PWA 安裝選擇結果:', outcome);
+        deferredPrompt = null;
+    });
+}
+
+if (installClose) {
+    installClose.addEventListener('click', () => {
+        if (installBanner) installBanner.style.display = 'none';
+    });
+}
+
+window.addEventListener('appinstalled', () => {
+    if (installBanner) installBanner.style.display = 'none';
+    deferredPrompt = null;
+    console.log('PWA 已成功安裝至主畫面');
+});
