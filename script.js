@@ -283,8 +283,23 @@ const updateIndicators = () => {
     const indDown = document.querySelector('.indicators .ind-down');
     const indRight = document.querySelector('.indicators .ind-right');
 
-    if (indLeft) indLeft.style.color = (resultTotalPages > 1 && resultPage > 0) ? '#111' : 'transparent';
-    if (indRight) indRight.style.color = (resultTotalPages > 1 && resultPage < resultTotalPages - 1) ? '#111' : 'transparent';
+    if (isEvaluated && resultTotalPages > 1) {
+        // 結果過長時：左方若有未顯示內容 (translateX < overflowW) 則亮 ◀，右方若有未顯示內容 (translateX > 0) 則亮 ▶
+        if (indLeft) indLeft.style.color = (resultCurrentTranslateX < resultOverflowW - 3) ? '#111' : 'transparent';
+        if (indRight) indRight.style.color = (resultCurrentTranslateX > 3) ? '#111' : 'transparent';
+    } else {
+        // 算式輸入中若超長，依 scrollLeft 指示可往左或往右捲動
+        const expContent = mf && mf.shadowRoot ? mf.shadowRoot.querySelector('.ML__content') : null;
+        if (expContent && expContent.scrollWidth > expContent.clientWidth + 2) {
+            mf.classList.add('is-overflowing');
+            if (indLeft) indLeft.style.color = expContent.scrollLeft > 2 ? '#111' : 'transparent';
+            if (indRight) indRight.style.color = (expContent.scrollLeft < expContent.scrollWidth - expContent.clientWidth - 2) ? '#111' : 'transparent';
+        } else {
+            if (mf) mf.classList.remove('is-overflowing');
+            if (indLeft) indLeft.style.color = 'transparent';
+            if (indRight) indRight.style.color = 'transparent';
+        }
+    }
     if (indUp) indUp.style.color = canRecallUp() ? '#111' : 'transparent';
     if (indDown) indDown.style.color = canRecallDown() ? '#111' : 'transparent';
 };
@@ -463,25 +478,29 @@ const setupPlaceholderClickGuard = () => {
 };
 
 
-// 計算解過長分頁狀態
+// 計算解過長分頁與即時拖曳狀態
 let resultPage = 0;
 let resultTotalPages = 1;
 let resultOverflowW = 0;
+let resultCurrentTranslateX = 0;
 
 // 更新計算解分頁狀態
 const updateResultPaging = (resetToPageZero = true) => {
     if (!resultEl) return;
     const sr = resultEl.shadowRoot;
     const content = sr ? sr.querySelector('.ML__content') : null;
+    const vp = document.getElementById('result-viewport') || resultEl;
     
     if (!content || !isEvaluated || !resultEl.value || resultEl.value === '0') {
         resultPage = 0;
         resultTotalPages = 1;
         resultOverflowW = 0;
+        resultCurrentTranslateX = 0;
         if (content) {
             content.style.transform = '';
             content.style.transition = '';
         }
+        if (vp) vp.classList.remove('is-overflowing');
         updateIndicators();
         return;
     }
@@ -493,11 +512,15 @@ const updateResultPaging = (resetToPageZero = true) => {
     if (resultOverflowW <= 3) {
         resultPage = 0;
         resultTotalPages = 1;
+        resultCurrentTranslateX = 0;
         content.style.transform = '';
         content.style.transition = '';
+        if (vp) vp.classList.remove('is-overflowing');
         updateIndicators();
         return;
     }
+
+    if (vp) vp.classList.add('is-overflowing');
 
     // 計算分頁步長 (約螢幕寬度減去小幅重疊以利接續閱讀)
     const pageStep = Math.max(80, viewW - 25);
@@ -522,6 +545,7 @@ const applyResultPage = (page) => {
     resultPage = Math.max(0, Math.min(resultTotalPages - 1, page));
 
     if (resultOverflowW <= 3) {
+        resultCurrentTranslateX = 0;
         content.style.transform = '';
         content.style.transition = '';
         updateIndicators();
@@ -542,6 +566,7 @@ const applyResultPage = (page) => {
     }
 
     const translateX = resultOverflowW - currentShiftFromStart;
+    resultCurrentTranslateX = translateX;
 
     content.style.transition = 'transform 0.18s cubic-bezier(0.2, 0, 0, 1)';
     content.style.transform = `translateX(${translateX}px)`;
@@ -571,32 +596,227 @@ const pageResultRight = () => {
     return false;
 };
 
-const attachResultTouchSwipe = () => {
+// 綁定輸入區 (expression) 滑鼠與觸控拖曳捲動
+const attachExpressionDrag = () => {
+    if (!mf || mf._hasExpDrag) return;
+    mf._hasExpDrag = true;
+
+    const getExpContent = () => mf.shadowRoot ? mf.shadowRoot.querySelector('.ML__content') : null;
+
+    let isExpDragging = false;
+    let expStartX = 0;
+    let expStartScroll = 0;
+    let expMoved = false;
+
+    const updateOverflowCursor = () => {
+        const c = getExpContent();
+        if (c && c.scrollWidth > c.clientWidth + 2) {
+            mf.classList.add('is-overflowing');
+        } else {
+            mf.classList.remove('is-overflowing');
+        }
+    };
+
+    const startDrag = (clientX) => {
+        const c = getExpContent();
+        if (!c || c.scrollWidth <= c.clientWidth + 2) return false;
+        isExpDragging = true;
+        expMoved = false;
+        expStartX = clientX;
+        expStartScroll = c.scrollLeft;
+        mf.classList.add('is-dragging');
+        return true;
+    };
+
+    const moveDrag = (clientX) => {
+        if (!isExpDragging) return false;
+        const c = getExpContent();
+        if (!c) return false;
+        const dx = clientX - expStartX;
+        if (Math.abs(dx) > 3) {
+            expMoved = true;
+            c.scrollLeft = expStartScroll - dx;
+            updateIndicators();
+            return true;
+        }
+        return false;
+    };
+
+    const endDrag = () => {
+        if (!isExpDragging) return;
+        isExpDragging = false;
+        mf.classList.remove('is-dragging');
+        updateIndicators();
+        updateOverflowCursor();
+    };
+
+    // 1. Pointer Events (Desktop 滑鼠與觸控通用)
+    mf.addEventListener('pointerdown', (e) => {
+        // 點擊鍵盤或選單按鈕時不攔截
+        if (e.target && e.target.closest && (e.target.closest('[part*="toggle"]') || e.target.closest('.ML__virtual-keyboard-toggle') || e.target.closest('.ML__menu-toggle'))) {
+            return;
+        }
+        if (startDrag(e.clientX)) {
+            try { mf.setPointerCapture(e.pointerId); } catch(err) {}
+        }
+    });
+
+    mf.addEventListener('pointermove', (e) => {
+        if (moveDrag(e.clientX)) {
+            e.preventDefault();
+        }
+    });
+
+    const releasePointer = (e) => {
+        if (isExpDragging) {
+            try { mf.releasePointerCapture(e.pointerId); } catch(err) {}
+            endDrag();
+        }
+    };
+    mf.addEventListener('pointerup', releasePointer);
+    mf.addEventListener('pointercancel', releasePointer);
+
+    // 2. 觸控專屬支援 (確保手機瀏覽器防滑動衝突)
+    mf.addEventListener('touchstart', (e) => {
+        if (e.touches && e.touches.length === 1) {
+            startDrag(e.touches[0].clientX);
+        }
+    }, { passive: true });
+
+    mf.addEventListener('touchmove', (e) => {
+        if (e.touches && e.touches.length === 1 && moveDrag(e.touches[0].clientX)) {
+            e.preventDefault();
+        }
+    }, { passive: false });
+
+    mf.addEventListener('touchend', endDrag, { passive: true });
+
+    // 3. 拖曳結束防止觸發游標亂跳
+    mf.addEventListener('click', (e) => {
+        if (expMoved) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+    }, true);
+
+    // 算式變更時自動偵測超長游標提示與方向指示
+    mf.addEventListener('input', () => {
+        setTimeout(() => {
+            updateOverflowCursor();
+            updateIndicators();
+        }, 30);
+    });
+};
+
+// 綁定輸出區 (result) 滑鼠與觸控連續拖曳與滑動分頁
+const attachResultDragAndSwipe = () => {
     const vp = document.getElementById('result-viewport') || resultEl;
-    if (!vp) return;
-    let touchStartX = 0;
-    let touchStartY = 0;
+    if (!vp || vp._hasResultDrag) return;
+    vp._hasResultDrag = true;
+
+    const getResContent = () => resultEl && resultEl.shadowRoot ? resultEl.shadowRoot.querySelector('.ML__content') : null;
+
+    let isResDragging = false;
+    let resStartX = 0;
+    let resStartTranslate = 0;
+    let resMoved = false;
+
+    const startDrag = (clientX) => {
+        const c = getResContent();
+        if (!c || !isEvaluated || resultOverflowW <= 3) return false;
+        isResDragging = true;
+        resMoved = false;
+        resStartX = clientX;
+        resStartTranslate = resultCurrentTranslateX;
+        c.style.transition = 'none'; // ⭐️ 拖曳時立即跟手
+        vp.classList.add('is-dragging');
+        return true;
+    };
+
+    const moveDrag = (clientX) => {
+        if (!isResDragging) return false;
+        const c = getResContent();
+        if (!c) return false;
+        const dx = clientX - resStartX;
+        if (Math.abs(dx) > 2) {
+            resMoved = true;
+            let nextX = resStartTranslate + dx;
+            // 限制在 [0, resultOverflowW] 區間
+            nextX = Math.max(0, Math.min(resultOverflowW, nextX));
+            resultCurrentTranslateX = nextX;
+            c.style.transform = `translateX(${nextX}px)`;
+            updateIndicators();
+            return true;
+        }
+        return false;
+    };
+
+    const endDrag = (clientX) => {
+        if (!isResDragging) return;
+        isResDragging = false;
+        vp.classList.remove('is-dragging');
+        const c = getResContent();
+        if (!c) return;
+
+        c.style.transition = 'transform 0.18s cubic-bezier(0.2, 0, 0, 1)';
+
+        // 依放開時的位置同步 resultPage
+        const viewW = resultEl.clientWidth || 276;
+        const pageStep = Math.max(80, viewW - 25);
+        if (resultCurrentTranslateX >= resultOverflowW - 10) {
+            resultPage = 0;
+        } else if (resultCurrentTranslateX <= 10) {
+            resultPage = resultTotalPages - 1;
+        } else {
+            resultPage = Math.max(0, Math.min(resultTotalPages - 1, Math.round((resultOverflowW - resultCurrentTranslateX) / pageStep)));
+        }
+
+        updateIndicators();
+    };
+
+    // 1. Pointer Events (Desktop 與 Mobile)
+    vp.addEventListener('pointerdown', (e) => {
+        if (startDrag(e.clientX)) {
+            try { vp.setPointerCapture(e.pointerId); } catch(err) {}
+        }
+    });
+
+    vp.addEventListener('pointermove', (e) => {
+        if (moveDrag(e.clientX)) {
+            e.preventDefault();
+        }
+    });
+
+    const releasePointer = (e) => {
+        if (isResDragging) {
+            try { vp.releasePointerCapture(e.pointerId); } catch(err) {}
+            endDrag(e.clientX);
+        }
+    };
+    vp.addEventListener('pointerup', releasePointer);
+    vp.addEventListener('pointercancel', releasePointer);
+
+    // 2. Touch Events (Mobile 專屬防滾動)
     vp.addEventListener('touchstart', (e) => {
         if (e.touches && e.touches.length === 1) {
-            touchStartX = e.touches[0].clientX;
-            touchStartY = e.touches[0].clientY;
+            startDrag(e.touches[0].clientX);
         }
     }, { passive: true });
-    vp.addEventListener('touchend', (e) => {
-        if (e.changedTouches && e.changedTouches.length === 1) {
-            const dx = e.changedTouches[0].clientX - touchStartX;
-            const dy = e.changedTouches[0].clientY - touchStartY;
-            if (Math.abs(dx) > 30 && Math.abs(dx) > Math.abs(dy)) {
-                if (dx < 0) {
-                    pageResultRight();
-                } else {
-                    pageResultLeft();
-                }
-            }
+
+    vp.addEventListener('touchmove', (e) => {
+        if (e.touches && e.touches.length === 1 && moveDrag(e.touches[0].clientX)) {
+            e.preventDefault();
         }
+    }, { passive: false });
+
+    vp.addEventListener('touchend', (e) => {
+        const clientX = e.changedTouches && e.changedTouches[0] ? e.changedTouches[0].clientX : resStartX;
+        endDrag(clientX);
     }, { passive: true });
 };
-attachResultTouchSwipe();
+
+attachExpressionDrag();
+attachResultDragAndSwipe();
 window.addEventListener('resize', () => updateResultPaging(false));
 
 window.addEventListener('load', () => {

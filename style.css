@@ -183,8 +183,16 @@ math-field,
     color: inherit;
     padding: 0;
     width: 100%;
-	/* ⭐️ 往下移：加上正值 (例如往下移 6px) */
     margin-top: 18px;
+    touch-action: pan-y;
+}
+.expression.is-overflowing {
+    cursor: grab;
+}
+.expression.is-dragging {
+    cursor: grabbing !important;
+    user-select: none !important;
+    -webkit-user-select: none !important;
 }
 .expression::part(container) {
     background: transparent;
@@ -199,6 +207,15 @@ math-field,
     display: flex;
     align-items: flex-end;
     box-sizing: border-box;
+    touch-action: pan-y;
+}
+.result-viewport.is-overflowing {
+    cursor: grab;
+}
+.result-viewport.is-dragging {
+    cursor: grabbing !important;
+    user-select: none !important;
+    -webkit-user-select: none !important;
 }
 
 .result {
