@@ -294,13 +294,13 @@ math-field,
     justify-content: space-between;
     align-items: center;
     width: 100%;
-    height: 12px;
-    font-size: 8px;
-    line-height: 12px;
+    height: 13px;
+    font-size: 11px;
+    line-height: 13px;
     font-weight: bold;
     padding: 0 1px;
     box-sizing: border-box;
-    margin-bottom: 1px;
+    margin-bottom: 0.1px;
     user-select: none;
     pointer-events: none;
     overflow: hidden;
@@ -308,9 +308,9 @@ math-field,
 }
 
 .labels-ran {
-    font-size: 6px;
-    letter-spacing: -0.3px;
-    transform: scaleY(0.85);
+    font-size: 12px;
+    letter-spacing: -0.5px;
+    transform: scaleY(1);
     transform-origin: bottom center;
 }
 .labels-ran .lbl-yellow {
@@ -321,18 +321,30 @@ math-field,
     margin-left: 1px;
 }
 
+/* π 與 e 專屬字高、字體與樣式設定 (×10^x 鍵上方) */
+.lbl-pi {
+    font-size: 8px;              /* ⭐️ π 的字高 (預設 8px) */
+    font-family: Arial, sans-serif; /* ⭐️ π 的字體 */
+}
+
+.lbl-e {
+    font-size: 8px;              /* ⭐️ e 的字高 (預設 8px) */
+    font-family: Arial, sans-serif; /* ⭐️ e 的字體 (如想用斜體可加 font-style: italic) */
+}
+
+/* style.css 第 324 行：所有黃色標籤 (包含 Ran#) */
 .lbl-orange,
 .lbl-yellow,
 .lbl-gold {
     color: #FFD700;
-    text-shadow: 0 0.5px 1px rgba(0, 0, 0, 0.45);
+    text-shadow: 0 0.5px 1px rgba(0, 0, 0, 0.65); /* ⭐️ 預設為 0.45 */
     white-space: nowrap;
     font-family: Arial, sans-serif;
 }
-
+/* style.css 第 333 行：所有紅色標籤 (包含 RanI) */
 .lbl-red {
     color: #d83a48;
-    text-shadow: 0 0.5px 1px rgba(0, 0, 0, 0.35);
+    text-shadow: 0 0.5px 1px rgba(0, 0, 0, 0.35); /* ⭐️ 預設為 0.35 */
     white-space: nowrap;
     margin-left: auto;
     font-family: Arial, sans-serif;
@@ -364,7 +376,7 @@ button[data-val="alpha"] {
     width: 100%;
     height: 24px;
     border-radius: 12px;
-    font-size: 10px;
+    font-size: 11px;
     box-shadow: 
         0 3px 0 #323539,
         0 4px 4px rgba(0,0,0,0.3), 
@@ -499,7 +511,7 @@ button[data-val="alpha"] {
         inset 0 2px 5px rgba(0,0,0,0.2);
 }
 
-.exp-btn { font-size: 13px; }
+.exp-btn { font-size: 16px; }
 
 /* 讓 MathLive 內部的容器不裁切，以便圖示可以往上移出邊界 */
 .expression {
