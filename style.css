@@ -529,14 +529,18 @@ button[data-val="alpha"] {
     contain: none !important;
 }
 
-/* 將圖示定位到非常上方 (負值)，與指示燈同一列；限制寬高以避免行動裝置觸控熱區膨脹下墜 */
+/* 將圖示定位在 LED 螢幕頂部狀態列 (基準為 .screen)，並嚴格限制觸控範圍為 18px，防止侵入積分上限輸入格 */
 .expression::part(virtual-keyboard-toggle) {
     position: absolute !important;
-    top: -25px !important;
+    top: 0px !important;
     right: 183px !important;
     left: auto !important;
     width: 18px !important;
+    min-width: 18px !important;
+    max-width: 18px !important;
     height: 18px !important;
+    min-height: 18px !important;
+    max-height: 18px !important;
     padding: 0 !important;
     margin: 0 !important;
     cursor: pointer !important;
@@ -545,11 +549,15 @@ button[data-val="alpha"] {
 }
 .expression::part(menu-toggle) {
     position: absolute !important;
-    top: -25px !important;
+    top: 0px !important;
     right: 157px !important;
     left: auto !important;
     width: 18px !important;
+    min-width: 18px !important;
+    max-width: 18px !important;
     height: 18px !important;
+    min-height: 18px !important;
+    max-height: 18px !important;
     padding: 0 !important;
     margin: 0 !important;
     cursor: pointer !important;
