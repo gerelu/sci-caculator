@@ -174,7 +174,7 @@ math-field,
 
 .expression {
     font-size: 22px;
-    height: 90px;
+    height: 9px;
     min-height: 90px;
     max-height: 90px;
     background: transparent;
@@ -183,6 +183,8 @@ math-field,
     color: inherit;
     padding: 0;
     width: 100%;
+	/* ⭐️ 往下移：加上正值 (例如往下移 6px) */
+    margin-top: 12px;
 }
 .expression::part(container) {
     background: transparent;
@@ -323,13 +325,17 @@ math-field,
 
 /* π 與 e 專屬字高、字體與樣式設定 (×10^x 鍵上方) */
 .lbl-pi {
-    font-size: 8px;              /* ⭐️ π 的字高 (預設 8px) */
-    font-family: Arial, sans-serif; /* ⭐️ π 的字體 */
+    font-size: 12px;              /* ⭐️ π 的字高 (預設 8px) */
+    font-family: 'Times New Roman', serif; /* 經典數學襯線字體 */
+	/*font-style: italic;*/                    /* ⭐️ 斜體 */
+    font-weight: bold;
 }
 
 .lbl-e {
-    font-size: 8px;              /* ⭐️ e 的字高 (預設 8px) */
-    font-family: Arial, sans-serif; /* ⭐️ e 的字體 (如想用斜體可加 font-style: italic) */
+    font-size: 12px;              /* ⭐️ e 的字高 (預設 8px) */
+    font-family: Arial, sans-serif; /* ⭐️ e 的字體*/
+	font-style: italic;                    /* ⭐️ 斜體 */
+    font-weight: bold;
 }
 
 /* style.css 第 324 行：所有黃色標籤 (包含 Ran#) */
@@ -479,7 +485,7 @@ button[data-val="alpha"] {
     border-radius: 5px;
     box-shadow: 
         0 3px 0 #9ca3ac,
-        0 4px 4px rgba(0,0,0,0.3), 
+        0 2px 3px rgba(0,0,0,0.3), 
         inset 0 1px 2px rgba(255,255,255,0.8);
 }
 
@@ -499,7 +505,7 @@ button[data-val="alpha"] {
     border-radius: 5px;
     box-shadow: 
         0 3px 0 #cc8877,
-        0 4px 4px rgba(0,0,0,0.3), 
+        0 2px 3px rgba(0,0,0,0.3), 
         inset 0 1px 2px rgba(255,255,255,0.6);
 }
 
