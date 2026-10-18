@@ -1848,3 +1848,47 @@ window.addEventListener('appinstalled', () => {
     deferredPrompt = null;
     console.log('PWA 已成功安裝至主畫面');
 });
+
+// 讓虛擬鍵盤與選單圖示的 tooltip 顯示 1 秒後自動消失，避免遮擋 LED 畫面
+const setupTooltipAutoDismiss = () => {
+    const attachToToggles = () => {
+        if (!mf || !mf.shadowRoot) return false;
+        const toggle = mf.shadowRoot.querySelector('[part*="virtual-keyboard-toggle"]');
+        const menu = mf.shadowRoot.querySelector('[part*="menu-toggle"]');
+        if (!toggle) return false;
+
+        [toggle, menu].forEach(el => {
+            if (!el || el._hasTooltipDismiss) return;
+            el._hasTooltipDismiss = true;
+            const origTooltip = el.getAttribute('data-tooltip') || '';
+            let timer = null;
+
+            const showAndScheduleDismiss = () => {
+                el.setAttribute('data-tooltip', origTooltip);
+                if (timer) clearTimeout(timer);
+                timer = setTimeout(() => {
+                    el.removeAttribute('data-tooltip');
+                }, 1000); // ⭐️ 顯示 1 秒後自動消失
+            };
+
+            const reset = () => {
+                if (timer) clearTimeout(timer);
+                el.setAttribute('data-tooltip', origTooltip);
+            };
+
+            el.addEventListener('pointerenter', showAndScheduleDismiss);
+            el.addEventListener('pointerdown', showAndScheduleDismiss);
+            el.addEventListener('pointerleave', reset);
+        });
+        return true;
+    };
+
+    if (!attachToToggles()) {
+        const interval = setInterval(() => {
+            if (attachToToggles()) clearInterval(interval);
+        }, 100);
+        setTimeout(() => clearInterval(interval), 5000);
+    }
+};
+setupTooltipAutoDismiss();
+
