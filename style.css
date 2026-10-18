@@ -109,7 +109,7 @@ body {
 }
 
 .indicators {
-    font-size: 9px;
+    font-size: 12px;
     display: flex;
     justify-content: space-between;
     margin-bottom: 2px;
@@ -184,7 +184,7 @@ math-field,
     padding: 0;
     width: 100%;
 	/* ⭐️ 往下移：加上正值 (例如往下移 6px) */
-    margin-top: 20px;
+    margin-top: 18px;
 }
 .expression::part(container) {
     background: transparent;

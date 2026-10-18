@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sci-calc-v34';
+const CACHE_NAME = 'sci-calc-v35';
 const urlsToCache = [
     './',
     './index.html',
