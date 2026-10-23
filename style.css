@@ -39,7 +39,7 @@ body {
     border: 4px solid #8e99a4;
     border-radius: 8px;
     padding: 6px 14px 4px 14px;
-    margin-bottom: 5px;
+    margin-bottom: 6px; /* 增加此數值即可將整個按鈕區往下推，加大 SHIFT 上方空間 */
     box-shadow: inset 0 3px 8px rgba(0,0,0,0.4);
     box-sizing: border-box;
     height: 193px;
@@ -101,15 +101,15 @@ body {
     font-size: 13px;                /* ⭐️ 單獨控制箭頭大小 */
 }
 .indicators .ind-up {
-	transform: translate(-41px, -4px); /* ⭐️ (左右, 上下) */
-	font-size: 16px;
+	transform: translate(-42px, -1px); /* ⭐️ (左右, 上下) */
+	font-size: 14px;
 }
 .indicators .ind-down {
-	transform: translate(-39px, -4px); /* ⭐️ (左右, 上下) */
-	font-size: 16px;
+	transform: translate(-41px, -1px); /* ⭐️ (左右, 上下) */
+	font-size: 14px;
 }
 .indicators .ind-right {
-    transform: translate(-37px, -2px); /* ⭐️ (左右, 上下) */
+    transform: translate(-40px, -2px); /* ⭐️ (左右, 上下) */
     font-size: 13px;                /* ⭐️ 單獨控制箭頭大小 */
 }
 /* 若想分別單獨調整：
@@ -245,7 +245,7 @@ math-field,
 .button-area {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 10px;         /* ⭐️ 改為 10px（增加了 2 個大間距，共增加 +8px） */
     position: relative;
 }
 
@@ -286,7 +286,7 @@ math-field,
 .left-funcs, .right-funcs {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 4.8px 7.2px;
+    gap: 8px 7.2px; /* 第一個數值是垂直排距 (row-gap)！ */
     width: calc((100% - 76px - 14px) / 2);
 }
 
@@ -457,7 +457,7 @@ button[data-val="alpha"] {
 .sci-buttons {
     display: grid;
     grid-template-columns: repeat(6, minmax(0, 1fr));
-    gap: 3.6px 4.8px;
+    gap: 7px 4.8px;    /* ⭐️ 垂直改為 7px（增加了 2 個排間距，共增加約 +6.8px） */
     margin-bottom: 1px;
 }
 
@@ -483,7 +483,7 @@ button[data-val="alpha"] {
 .num-buttons {
     display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 3.6px 6px;
+    gap: 7.5px 6px;    /* ⭐️ 垂直改為 7.5px（增加了 4 個排間距，共增加約 +15.6px） */
 }
 
 .num-btn, .exp-btn, .ans-btn, .op-btn, .eq-btn {
