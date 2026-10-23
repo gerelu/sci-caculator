@@ -85,31 +85,31 @@ body {
 .indicators .ind-d,
 .indicators .ind-r,
 .indicators .ind-g {
-    transform: translate(-30px, 1px); /* ⭐️ (左右, 上下)：正值向右/向下，負值向左/向上 */
+    transform: translate(-40px, 1px); /* ⭐️ (左右, 上下)：正值向右/向下，負值向左/向上 */
     /* 例如想向左平移 5px：transform: translateX(-5px); */
 	font-size: 13px; 
 }
 
 .indicators .ind-math {
-    transform: translate(-50px, 1px); /* ⭐️ (左右, 上下)：正值向右/向下，負值向左/向上 */
+    transform: translate(-60px, 1px); /* ⭐️ (左右, 上下)：正值向右/向下，負值向左/向上 */
     font-size: 13px;                /* ⭐️ 單獨控制 MATH 字高 */
 }
 
 /* 四個箭頭一起微調 */
 .indicators .ind-left {
-    transform: translate(-35px, -2px); /* ⭐️ (左右, 上下) */
+    transform: translate(-43px, -2px); /* ⭐️ (左右, 上下) */
     font-size: 13px;                /* ⭐️ 單獨控制箭頭大小 */
 }
 .indicators .ind-up {
-	transform: translate(-32px, -4px); /* ⭐️ (左右, 上下) */
-	font-size: 18px;
+	transform: translate(-41px, -4px); /* ⭐️ (左右, 上下) */
+	font-size: 16px;
 }
 .indicators .ind-down {
-	transform: translate(-29px, -4px); /* ⭐️ (左右, 上下) */
-	font-size: 18px;
+	transform: translate(-39px, -4px); /* ⭐️ (左右, 上下) */
+	font-size: 16px;
 }
 .indicators .ind-right {
-    transform: translate(-26px, -2px); /* ⭐️ (左右, 上下) */
+    transform: translate(-37px, -2px); /* ⭐️ (左右, 上下) */
     font-size: 13px;                /* ⭐️ 單獨控制箭頭大小 */
 }
 /* 若想分別單獨調整：
