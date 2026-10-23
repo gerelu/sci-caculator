@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sci-calc-v36';
+const CACHE_NAME = 'sci-calc-v40';
 const urlsToCache = [
     './',
     './index.html',
@@ -40,7 +40,7 @@ self.addEventListener('install', event => {
     );
 });
 
-// 清理舊版本快取 (如 casio-calc-v1)
+// 清理舊版本快取 (如 計算機-calc-v1)
 self.addEventListener('activate', event => {
     event.waitUntil(
         caches.keys().then(cacheNames => {

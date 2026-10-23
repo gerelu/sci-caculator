@@ -32,56 +32,7 @@ body {
     box-sizing: border-box;
 }
 
-.top-brand-area {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 20px;
-    padding: 0 10px;
-}
 
-.brand-text {
-    color: #fff;
-    display: flex;
-    flex-direction: column;
-}
-
-.casio {
-    font-size: 24px;
-    font-weight: bold;
-    letter-spacing: 2px;
-    text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
-}
-
-.model {
-    font-size: 11px;
-    font-style: italic;
-    font-weight: bold;
-    margin-top: 2px;
-}
-
-.vpam {
-    font-size: 9px;
-    font-style: italic;
-    margin-top: 1px;
-}
-
-.edition {
-    font-size: 9px;
-    text-align: right;
-    margin-top: -12px;
-    margin-right: -40px;
-    color: #f0f0f0;
-}
-
-.solar-panel {
-    background: #2a2522;
-    width: 100px;
-    height: 30px;
-    border: 2px solid #8a939f;
-    border-radius: 3px;
-    box-shadow: inset 0 0 10px rgba(0,0,0,0.9);
-}
 
 .screen-wrapper {
     background: #c3cec9;
@@ -109,13 +60,13 @@ body {
 }
 
 .indicators {
-    font-size: 12px;
+    font-size: 13px;
     display: flex;
     justify-content: space-between;
     margin-bottom: 2px;
     color: transparent;
     user-select: none;
-    padding-right: 16px;
+    padding-right: 20px;
     box-sizing: border-box;
 }
 .indicators span {
@@ -130,6 +81,43 @@ body {
 .indicators .ind-g {
     font-weight: bold;
 }
+
+.indicators .ind-d,
+.indicators .ind-r,
+.indicators .ind-g {
+    transform: translate(-30px, 1px); /* ⭐️ (左右, 上下)：正值向右/向下，負值向左/向上 */
+    /* 例如想向左平移 5px：transform: translateX(-5px); */
+	font-size: 13px; 
+}
+
+.indicators .ind-math {
+    transform: translate(-50px, 1px); /* ⭐️ (左右, 上下)：正值向右/向下，負值向左/向上 */
+    font-size: 13px;                /* ⭐️ 單獨控制 MATH 字高 */
+}
+
+/* 四個箭頭一起微調 */
+.indicators .ind-left {
+    transform: translate(-35px, -2px); /* ⭐️ (左右, 上下) */
+    font-size: 13px;                /* ⭐️ 單獨控制箭頭大小 */
+}
+.indicators .ind-up {
+	transform: translate(-32px, -4px); /* ⭐️ (左右, 上下) */
+	font-size: 18px;
+}
+.indicators .ind-down {
+	transform: translate(-29px, -4px); /* ⭐️ (左右, 上下) */
+	font-size: 18px;
+}
+.indicators .ind-right {
+    transform: translate(-26px, -2px); /* ⭐️ (左右, 上下) */
+    font-size: 13px;                /* ⭐️ 單獨控制箭頭大小 */
+}
+/* 若想分別單獨調整：
+.indicators .ind-up   { transform: translate(0px, 0px); }
+.indicators .ind-down { transform: translate(0px, 0px); }
+.indicators .ind-left { transform: translate(0px, 0px); }
+.indicators .ind-right{ transform: translate(0px, 0px); }
+*/
 
 .indicators .ind-math,
 .indicators .ind-d,
@@ -183,7 +171,7 @@ math-field,
     color: inherit;
     padding: 0;
     width: 100%;
-    margin-top: 18px;
+    margin-top: 10px;
     touch-action: pan-y;
 }
 .expression.is-overflowing {
@@ -208,6 +196,7 @@ math-field,
     align-items: flex-end;
     box-sizing: border-box;
     touch-action: pan-y;
+	padding-bottom: 2px;  /* ⭐️ 在此處加入：數值越大，結果離下緣越遠（越往上提） */
 }
 .result-viewport.is-overflowing {
     cursor: grab;
@@ -219,7 +208,7 @@ math-field,
 }
 
 .result {
-    font-size: 20.4px;
+    font-size: 20px;
     text-align: right;
     margin: 0 !important;
     min-height: 48px;
@@ -257,6 +246,7 @@ math-field,
     display: flex;
     flex-direction: column;
     gap: 6px;
+    position: relative;
 }
 
 .btn {
@@ -374,7 +364,7 @@ math-field,
 }
 
 .lbl-gray {
-    color: #5c6673;
+    color: #8895b8;
     text-shadow: 0 0.5px 0.5px rgba(255, 255, 255, 0.35);
     white-space: nowrap;
     font-family: Arial, sans-serif;
@@ -399,7 +389,7 @@ button[data-val="alpha"] {
     width: 100%;
     height: 24px;
     border-radius: 12px;
-    font-size: 11px;
+    font-size: 12px;
     box-shadow: 
         0 3px 0 #323539,
         0 4px 4px rgba(0,0,0,0.3), 
@@ -413,8 +403,10 @@ button[data-val="alpha"] {
         inset 0 2px 5px rgba(0,0,0,0.4);
 }
 
-.on-btn {
+.on-btn, .history-btn {
     background: #4a4e54;
+    font-size: 12px;
+    letter-spacing: -0.2px;
 }
 
 .d-pad {
@@ -473,7 +465,7 @@ button[data-val="alpha"] {
     background: #4a4e54;
     color: #fff;
     height: 26px;
-    font-size: 11px;
+    font-size: 12px;
     border-radius: 5px;
     box-shadow: 
         0 3px 0 #323539,
@@ -550,7 +542,7 @@ button[data-val="alpha"] {
 .expression::part(virtual-keyboard-toggle) {
     position: absolute !important;
     top: 0px !important;
-    right: 220px !important;
+    right: 240px !important;
     left: auto !important;
     width: 18px !important;
     min-width: 18px !important;
@@ -567,7 +559,7 @@ button[data-val="alpha"] {
 .expression::part(menu-toggle) {
     position: absolute !important;
     top: 0px !important;
-    right: 180px !important;
+    right: 200px !important;
     left: auto !important;
     width: 18px !important;
     min-width: 18px !important;
@@ -582,11 +574,14 @@ button[data-val="alpha"] {
     z-index: 10 !important;
 }
 
-/* 讓提示 (tooltip) 移入時立即可見 (不需等待 MathLive 預設的 1s 延遲)，並配合 JS 於 1 秒後自動消失 */
-.expression::part(virtual-keyboard-toggle):hover::after,
-.expression::part(menu-toggle):hover::after {
-    transition-delay: 0s !important;
-    transition-duration: 0.15s !important;
+/* 關閉 MathLive 預設的黑框 ::after tooltip，改用與 MATH 相同的瀏覽器原生 title tooltip 格式 */
+.expression::part(virtual-keyboard-toggle)::after,
+.expression::part(menu-toggle)::after {
+    display: none !important;
+    content: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
 }
 
 /* 消除手機點擊按鈕時的延遲與雙擊縮放干擾 */
@@ -637,4 +632,185 @@ button[data-val="alpha"] {
 @keyframes fadeInDown {
     from { opacity: 0; transform: translate(-50%, -10px); }
     to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+/* 歷史紀錄彈窗視窗 */
+.history-panel {
+    position: absolute;
+    top: 86px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #d8e0e7;
+    border: 2px solid #85919f;
+    border-radius: 12px;
+    box-shadow: 
+        inset 0 2px 4px rgba(255, 255, 255, 0.7),
+        0 8px 16px rgba(0, 0, 0, 0.3);
+    display: flex;
+    flex-direction: column;
+    z-index: 60;
+    overflow: hidden;
+    box-sizing: border-box;
+    animation: historyPanelFadeIn 0.18s ease-out;
+}
+
+@keyframes historyPanelFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.history-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 10px;
+    background: #4a4e54;
+    color: #fff;
+    font-size: 12px;
+    font-weight: bold;
+    border-bottom: 1px solid #36393e;
+    user-select: none;
+    -webkit-user-select: none;
+    flex-shrink: 0;
+}
+
+.history-title {
+    letter-spacing: 0.5px;
+}
+
+.history-actions {
+    display: flex;
+    gap: 6px;
+}
+
+.history-clear-btn, .history-close-btn {
+    background: #2b3035;
+    color: #eee;
+    border: 1px solid #666;
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 11px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background-color 0.15s, color 0.15s;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.history-clear-btn:hover, .history-close-btn:hover {
+    background: #3c434a;
+    color: #fff;
+}
+
+.history-clear-btn:active, .history-close-btn:active {
+    background: #1e2226;
+}
+
+.history-list {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    box-sizing: border-box;
+}
+
+/* 歷史清單滾動條美化 */
+.history-list::-webkit-scrollbar {
+    width: 5px;
+}
+.history-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+.history-list::-webkit-scrollbar-thumb {
+    background: #9aa5b2;
+    border-radius: 3px;
+}
+.history-list::-webkit-scrollbar-thumb:hover {
+    background: #7a8694;
+}
+
+.history-item {
+    background: #fff;
+    border: 1px solid #b2becb;
+    border-radius: 8px;
+    padding: 6px 8px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    transition: background-color 0.15s, border-color 0.15s, transform 0.1s;
+    user-select: none;
+    -webkit-user-select: none;
+    box-sizing: border-box;
+}
+
+.history-item:hover {
+    background: #f0f7ff;
+    border-color: #3b82f6;
+}
+
+.history-item:active {
+    background: #e0effe;
+    border-color: #2563eb;
+    transform: scale(0.99);
+}
+
+.history-item-exp {
+    pointer-events: none;
+    background: transparent;
+    border: none;
+    outline: none;
+    font-size: 15px;
+    min-height: 22px;
+    width: 100%;
+    overflow: hidden;
+}
+
+.history-item-res-wrapper {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 4px;
+    align-self: flex-end;
+}
+
+.history-item-eq {
+    font-size: 14px;
+    font-weight: bold;
+    color: #1e3a8a;
+}
+
+.history-item-res {
+    pointer-events: none;
+    background: transparent;
+    border: none;
+    outline: none;
+    font-size: 14px;
+    color: #1e3a8a;
+    font-weight: bold;
+}
+
+.history-empty {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    color: #667280;
+    font-size: 13px;
+    text-align: center;
+    padding: 20px;
+    box-sizing: border-box;
 }

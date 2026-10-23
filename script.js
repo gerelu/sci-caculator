@@ -45,6 +45,12 @@ const saveHistory = () => {
     } catch(e) {
         console.warn('儲存計算歷史失敗', e);
     }
+    try {
+        const panel = typeof getHistoryPanel === 'function' ? getHistoryPanel() : null;
+        if (panel && panel.style.display !== 'none') {
+            renderHistoryList();
+        }
+    } catch(e) {}
 };
 
 let history = loadHistory();
@@ -140,7 +146,173 @@ const handleRecallDown = () => {
     return false;
 };
 
-// 變數記憶體 (Casio 9大變數)
+// ==========================================
+// 歷史紀錄彈窗視窗管理
+// ==========================================
+const getHistoryPanel = () => document.getElementById('history-panel');
+const getHistoryList = () => document.getElementById('history-list');
+const getHistoryTitle = () => document.getElementById('history-title');
+
+const updateHistoryPanelPosition = () => {
+    const panel = getHistoryPanel();
+    const topBtns = document.querySelector('.top-buttons');
+    if (topBtns && panel) {
+        panel.style.top = (topBtns.offsetTop + topBtns.offsetHeight + 4) + 'px';
+    }
+};
+
+const renderHistoryList = () => {
+    const list = getHistoryList();
+    const title = getHistoryTitle();
+    if (!list) return;
+    list.innerHTML = '';
+
+    if (history.length === 0) {
+        if (title) title.textContent = '歷史紀錄 (0)';
+        const empty = document.createElement('div');
+        empty.className = 'history-empty';
+        empty.textContent = '暫無計算歷史紀錄';
+        list.appendChild(empty);
+        return;
+    }
+
+    if (title) title.textContent = `歷史紀錄 (${history.length})`;
+
+    // 最新紀錄排在最上方
+    const reversed = history.slice().reverse();
+    reversed.forEach((item) => {
+        const expr = typeof item === 'string' ? item : (item.expression || '');
+        const res = typeof item === 'string' ? '' : (item.result || '');
+
+        const card = document.createElement('div');
+        card.className = 'history-item';
+        card.title = '點選將此計算式帶入螢幕重新編輯';
+
+        // 算式欄位
+        const mfExp = document.createElement('math-field');
+        mfExp.className = 'history-item-exp';
+        mfExp.setAttribute('read-only', '');
+        mfExp.setAttribute('inputmode', 'none');
+        mfExp.setAttribute('math-virtual-keyboard-policy', 'manual');
+        mfExp.value = expr;
+        card.appendChild(mfExp);
+
+        // 結果欄位 (若有計算結果)
+        if (res && res !== '0') {
+            const resWrap = document.createElement('div');
+            resWrap.className = 'history-item-res-wrapper';
+
+            const eqSpan = document.createElement('span');
+            eqSpan.className = 'history-item-eq';
+            eqSpan.textContent = '=';
+            resWrap.appendChild(eqSpan);
+
+            const mfRes = document.createElement('math-field');
+            mfRes.className = 'history-item-res';
+            mfRes.setAttribute('read-only', '');
+            mfRes.setAttribute('inputmode', 'none');
+            mfRes.setAttribute('math-virtual-keyboard-policy', 'manual');
+            mfRes.value = res;
+            resWrap.appendChild(mfRes);
+
+            card.appendChild(resWrap);
+        }
+
+        // 點選就將選中的計算式帶入led螢幕可重新編輯計算式，帶入計算式顯示於led螢幕後並關閉紀錄視窗
+        card.addEventListener('click', () => {
+            selectHistoryItem(expr);
+        });
+
+        list.appendChild(card);
+    });
+};
+
+const selectHistoryItem = (expr) => {
+    mf.value = expr;
+    resultEl.value = '';
+    isEvaluated = false;
+    historyIndex = -1;
+    draftExpression = '';
+    suppressSoftKeyboard();
+    mf.focus({ preventScroll: true });
+    mf.executeCommand('moveToMathfieldEnd');
+    removeHighlightBackgrounds();
+    updateIndicators();
+    updateResultPaging(true);
+    hideHistoryPanel();
+};
+
+const showHistoryPanel = () => {
+    const panel = getHistoryPanel();
+    if (!panel) return;
+    updateHistoryPanelPosition();
+    renderHistoryList();
+    panel.style.display = 'flex';
+};
+
+const hideHistoryPanel = () => {
+    const panel = getHistoryPanel();
+    if (!panel) return;
+    panel.style.display = 'none';
+};
+
+const toggleHistoryPanel = () => {
+    const panel = getHistoryPanel();
+    if (!panel) return;
+    if (panel.style.display === 'none' || getComputedStyle(panel).display === 'none') {
+        showHistoryPanel();
+    } else {
+        hideHistoryPanel();
+    }
+};
+
+const setupHistoryPanelEvents = () => {
+    const clearBtn = document.getElementById('history-clear-btn');
+    const closeBtn = document.getElementById('history-close-btn');
+
+    if (clearBtn && !clearBtn._bound) {
+        clearBtn._bound = true;
+        clearBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            history = [];
+            historyIndex = -1;
+            draftExpression = '';
+            saveHistory();
+            renderHistoryList();
+            updateIndicators();
+        });
+    }
+
+    if (closeBtn && !closeBtn._bound) {
+        closeBtn._bound = true;
+        closeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            hideHistoryPanel();
+        });
+    }
+
+    // 點擊視窗外部區域自動關閉歷史紀錄
+    document.addEventListener('pointerdown', (e) => {
+        const panel = getHistoryPanel();
+        if (!panel || panel.style.display === 'none') return;
+        const historyBtn = document.querySelector('.history-btn');
+        if (historyBtn && (historyBtn === e.target || historyBtn.contains(e.target))) {
+            return;
+        }
+        if (!panel.contains(e.target)) {
+            hideHistoryPanel();
+        }
+    });
+
+    window.addEventListener('resize', () => {
+        const panel = getHistoryPanel();
+        if (panel && panel.style.display !== 'none') {
+            updateHistoryPanelPosition();
+        }
+    });
+};
+
+// 變數記憶體 (計算機 9大變數)
 const memoryVars = {
     A: 0, B: 0, C: 0, D: 0, E: 0, F: 0, X: 0, Y: 0, M: 0
 };
@@ -417,7 +589,7 @@ const setupPlaceholderClickGuard = () => {
                         mf.position = 0;
                         mf.executeCommand('moveToNextPlaceholder');
                     } else {
-                        mf.executeCommand('moveToMathFieldEnd');
+                        mf.executeCommand('moveToMathfieldEnd');
                     }
                     removeHighlightBackgrounds();
                 }, 15);
@@ -1275,8 +1447,33 @@ const evaluateExpression = () => {
             throw new Error('Math ERROR');
         }
 
-        // 6. 百分比符號替換
-        mathStr = mathStr.replace(/%/g, '\\%');
+        // 6. 百分比計算處理 (%)
+        // 先將所有形式的百分比標記統一為標準的 %
+        mathStr = mathStr.replace(/(?:\\text\s*\{\s*\\?%\s*\}|\\%)/g, '%');
+
+        // 6.1 處理加減百分比 (例如 100 + 10% => 110, 100 - 10% => 90)
+        mathStr = mathStr.replace(/(^|[^0-9.%])([0-9.]+)\s*([+-])\s*([0-9.]+)%/g, (match, prefix, a, op, b) => {
+            return `${prefix}${a} ${op} \\left(${a} \\times \\frac{${b}}{100}\\right)`;
+        });
+
+        // 6.2 處理括號後接百分比: (expr)% 或 \left(expr\right)%
+        mathStr = mathStr.replace(/(?:\\left\((.*?)\\right\)|\(([^()]+)\))%/g, (m, p1, p2) => {
+            const inner = p1 || p2;
+            return `\\left(\\frac{${inner}}{100}\\right)`;
+        });
+
+        // 6.3 處理分數後接百分比: \frac{a}{b}%
+        mathStr = mathStr.replace(/(\\frac\{[^{}]+\}\{[^{}]+\})%/g, (m, frac) => {
+            return `\\left(\\frac{${frac}}{100}\\right)`;
+        });
+
+        // 6.4 處理一般數值或變數後接百分比: 50%, 2.5%, Ans%
+        mathStr = mathStr.replace(/([0-9.]+|[A-Za-z]+)%/g, (m, num) => {
+            return `\\left(\\frac{${num}}{100}\\right)`;
+        });
+
+        // 6.5 安全清理任何單獨殘留的 %
+        mathStr = mathStr.replace(/%/g, '\\times \\frac{1}{100}');
 
         // 7. 解方程式 (SOLVE 功能，含等號 =)
         if (mathStr.includes('=')) {
@@ -1354,6 +1551,7 @@ const evaluateExpression = () => {
             if (res !== undefined && res !== null) {
                 if (typeof res === 'number') numVal = res;
                 else if (res.decimal !== undefined) numVal = Number(res);
+                else if (res.num !== undefined) numVal = Number(res.num);
                 else if (!isNaN(Number(res))) numVal = Number(res);
             }
         } catch(e) {}
@@ -1365,13 +1563,18 @@ const evaluateExpression = () => {
         }
 
         if (numVal !== null && Number.isFinite(numVal)) {
-            // 若 latexRes 為純小數或純數字，嘗試透過連分數演算法轉為精確最簡分數
-            const isPureDecimal = !latexRes || (!latexRes.includes('\\frac') && !latexRes.includes('\\sqrt') && !latexRes.includes('\\pi') && !latexRes.includes('\\times 10'));
-            if (isPureDecimal) {
-                const frac = floatToFraction(numVal);
-                if (frac && frac.den > 1) {
-                    const sign = frac.num < 0 ? '-' : '';
-                    latexRes = (sign === '-' ? '-\\frac{' : '\\frac{') + Math.abs(frac.num) + '}{' + frac.den + '}';
+            if (Number.isInteger(numVal)) {
+                // 若為整數，確保移除小數尾數 (例如 ComputeEngine 輸出 20.0 或 75.0)
+                latexRes = String(numVal);
+            } else {
+                // 若 latexRes 為純小數或純數字，嘗試透過連分數演算法轉為精確最簡分數
+                const isPureDecimal = !latexRes || (!latexRes.includes('\\frac') && !latexRes.includes('\\sqrt') && !latexRes.includes('\\pi') && !latexRes.includes('\\times 10'));
+                if (isPureDecimal) {
+                    const frac = floatToFraction(numVal);
+                    if (frac && frac.den > 1) {
+                        const sign = frac.num < 0 ? '-' : '';
+                        latexRes = (sign === '-' ? '-\\frac{' : '\\frac{') + Math.abs(frac.num) + '}{' + frac.den + '}';
+                    }
                 }
             }
         }
@@ -1555,7 +1758,7 @@ document.querySelectorAll('.btn').forEach(btn => {
         }
 
         // 4. 重置與清除
-        if (val === 'ac' || val === 'on') {
+        if (val === 'ac') {
             mf.value = '';
             resultEl.value = '0';
             isEvaluated = false;
@@ -1567,10 +1770,20 @@ document.querySelectorAll('.btn').forEach(btn => {
             isShowingDMS = false;
             historyIndex = -1;
             draftExpression = '';
+            hideHistoryPanel();
             updateIndicators();
             updateResultPaging(true);
             suppressSoftKeyboard();
             mf.focus({ preventScroll: true });
+            return;
+        }
+
+        // 5. 歷史紀錄視窗 (History 按鍵)
+        if (val === 'history') {
+            isShift = false;
+            isAlpha = false;
+            updateIndicators();
+            toggleHistoryPanel();
             return;
         }
 
@@ -1785,7 +1998,7 @@ document.querySelectorAll('.btn').forEach(btn => {
             '.': '\\operatorname{Ran\\#}',
             'exp': '\\pi',
             'ans': '\\operatorname{PreAns}',
-            '7': '299792458' // 光速 c (Casio CONST)
+            '7': '299792458' // 光速 c (計算機 CONST)
         };
 
         // ALPHA 映射表
@@ -1881,6 +2094,21 @@ const keyMap = {
 };
 
 document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        const panel = getHistoryPanel();
+        if (panel && panel.style.display !== 'none') {
+            hideHistoryPanel();
+            e.preventDefault();
+            return;
+        }
+    }
+
+    if (e.key === '%') {
+        e.preventDefault();
+        insertMath('\\%');
+        return;
+    }
+
     if (e.key === 'Backspace' || e.key === 'Delete') {
         const btn = document.querySelector('.btn[data-val="del"]');
         if (btn) {
@@ -2007,7 +2235,7 @@ const attachDPad = () => {
             historyIndex = -1;
             draftExpression = '';
             updateIndicators();
-            mf.executeCommand('moveToMathFieldEnd');
+            mf.executeCommand('moveToMathfieldEnd');
         } else {
             mf.executeCommand('moveToPreviousChar');
         }
@@ -2024,7 +2252,7 @@ const attachDPad = () => {
             historyIndex = -1;
             draftExpression = '';
             updateIndicators();
-            mf.executeCommand('moveToMathFieldStart');
+            mf.executeCommand('moveToMathfieldStart');
         } else {
             mf.executeCommand('moveToNextChar');
         }
@@ -2069,46 +2297,51 @@ window.addEventListener('appinstalled', () => {
     console.log('PWA 已成功安裝至主畫面');
 });
 
-// 讓虛擬鍵盤與選單圖示的 tooltip 顯示 1 秒後自動消失，避免遮擋 LED 畫面
-const setupTooltipAutoDismiss = () => {
-    const attachToToggles = () => {
+// 將虛擬鍵盤 (toggle virtual keyboard) 與選單 (menu) 的 tooltip 格式改為與 MATH 相同的原生 title 提示
+const setupTogglesTooltip = () => {
+    const applyTooltips = () => {
         if (!mf || !mf.shadowRoot) return false;
         const toggle = mf.shadowRoot.querySelector('[part*="virtual-keyboard-toggle"]');
         const menu = mf.shadowRoot.querySelector('[part*="menu-toggle"]');
         if (!toggle) return false;
 
-        [toggle, menu].forEach(el => {
-            if (!el || el._hasTooltipDismiss) return;
-            el._hasTooltipDismiss = true;
-            const origTooltip = el.getAttribute('data-tooltip') || '';
-            let timer = null;
+        if (toggle) {
+            toggle.removeAttribute('data-tooltip');
+            toggle.setAttribute('title', '切換虛擬鍵盤 (Toggle Virtual Keyboard)，點擊切換');
+        }
 
-            const showAndScheduleDismiss = () => {
-                el.setAttribute('data-tooltip', origTooltip);
-                if (timer) clearTimeout(timer);
-                timer = setTimeout(() => {
-                    el.removeAttribute('data-tooltip');
-                }, 1000); // ⭐️ 顯示 1 秒後自動消失
-            };
+        if (menu) {
+            menu.removeAttribute('data-tooltip');
+            menu.setAttribute('title', '選單 (Menu)，點擊切換');
+        }
 
-            const reset = () => {
-                if (timer) clearTimeout(timer);
-                el.setAttribute('data-tooltip', origTooltip);
-            };
-
-            el.addEventListener('pointerenter', showAndScheduleDismiss);
-            el.addEventListener('pointerdown', showAndScheduleDismiss);
-            el.addEventListener('pointerleave', reset);
+        // 監聽並防止 MathLive 重新寫入 data-tooltip
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((m) => {
+                if (m.type === 'attributes' && m.attributeName === 'data-tooltip') {
+                    if (m.target.hasAttribute('data-tooltip')) {
+                        m.target.removeAttribute('data-tooltip');
+                    }
+                }
+            });
         });
+
+        [toggle, menu].forEach(el => {
+            if (el) {
+                observer.observe(el, { attributes: true, attributeFilter: ['data-tooltip'] });
+            }
+        });
+
         return true;
     };
 
-    if (!attachToToggles()) {
+    if (!applyTooltips()) {
         const interval = setInterval(() => {
-            if (attachToToggles()) clearInterval(interval);
+            if (applyTooltips()) clearInterval(interval);
         }, 100);
         setTimeout(() => clearInterval(interval), 5000);
     }
 };
-setupTooltipAutoDismiss();
+setupTogglesTooltip();
+setupHistoryPanelEvents();
 
