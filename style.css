@@ -158,6 +158,7 @@ math-field,
     --text-highlight-background-color: transparent !important;
     --composition-background-color: transparent !important;
     --error-background-color: transparent !important;
+    --selection-color: hsl(212, 40%, 49%) !important;
 }
 
 .expression {
@@ -189,6 +190,7 @@ math-field,
 .result-viewport {
     width: 100%;
     margin-top: auto;
+    height: 55px;
     min-height: 55px;
     position: relative;
     overflow: hidden !important;
@@ -205,6 +207,41 @@ math-field,
     cursor: grabbing !important;
     user-select: none !important;
     -webkit-user-select: none !important;
+}
+
+/* 多解方程式 (SOLVE) 臨時展開樣式：高度暫時擴展為 90px，輸入區微調為 55px，內容頂部對齊支援垂直拖曳 */
+.result-viewport.is-multi-solution {
+    height: 90px !important;
+    min-height: 90px !important;
+    max-height: 90px !important;
+    align-items: flex-start !important;
+    padding-top: 2px !important;
+    padding-bottom: 2px !important;
+    touch-action: pan-x pan-y;
+}
+.result-viewport.is-multi-solution.is-overflowing {
+    cursor: grab;
+}
+.result-viewport.is-multi-solution.is-dragging {
+    cursor: grabbing !important;
+}
+.expression.is-multi-solution {
+    height: 55px !important;
+    min-height: 55px !important;
+    max-height: 55px !important;
+}
+.result-viewport.is-multi-solution .result {
+    min-height: 0 !important;
+    height: auto !important;
+    align-items: flex-start !important;
+    justify-content: flex-start !important;
+}
+.result-viewport.is-multi-solution .result::part(container) {
+    align-items: flex-start !important;
+    justify-content: flex-start !important;
+}
+.result-viewport.is-multi-solution .result::part(content) {
+    align-self: flex-start !important;
 }
 
 .result {
@@ -328,6 +365,11 @@ math-field,
 .labels-ran .lbl-red {
     display: inline-block;
     margin-left: 1px;
+}
+
+.labels-ans {
+    font-size: 11px;
+    letter-spacing: -0.4px;
 }
 
 /* π 與 e 專屬字高、字體與樣式設定 (×10^x 鍵上方) */
@@ -816,4 +858,32 @@ button[data-val="alpha"] {
     text-align: center;
     padding: 20px;
     box-sizing: border-box;
+}
+
+/* xAns 模式下的歷史紀錄卡片樣式 */
+.history-item.is-xans-mode {
+    border-color: #f87171;
+    background: #fffafa;
+}
+.history-item.is-xans-mode:hover {
+    background: #fee2e2;
+    border-color: #dc2626;
+}
+.history-item.is-xans-mode:active {
+    background: #fecaca;
+    border-color: #b91c1c;
+}
+.history-item.is-xans-mode .history-item-eq,
+.history-item.is-xans-mode .history-item-res {
+    color: #b91c1c;
+}
+.history-item-xans-tag {
+    font-size: 10px;
+    color: #dc2626;
+    background: #fee2e2;
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-weight: bold;
+    margin-right: 4px;
+    border: 1px solid rgba(220, 38, 38, 0.2);
 }

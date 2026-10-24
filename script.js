@@ -19,6 +19,14 @@ let ansValue = 1;
 let preAnsValue = 0;
 let ansExact = '1';
 let preAnsExact = '0';
+let xAnsValue = 0;
+let xAnsExact = '0';
+try {
+    const savedXVal = localStorage.getItem('casio_calc_xans_val');
+    const savedXExact = localStorage.getItem('casio_calc_xans_exact');
+    if (savedXVal !== null) xAnsValue = parseFloat(savedXVal) || 0;
+    if (savedXExact !== null) xAnsExact = savedXExact;
+} catch(e) {}
 let engOffset = 0;
 
 // 計算歷史 (Multi-Replay 記憶體，建議 20 次記憶以兼顧運算深度與翻閱體驗)
@@ -56,16 +64,21 @@ const saveHistory = () => {
 let history = loadHistory();
 let historyIndex = -1;
 let draftExpression = '';
+let isMultiSolution = false;
+let resultCurrentTranslateY = 0;
+let resultOverflowH = 0;
 
-// 判斷是否可往上回溯歷史 (更舊紀錄)
+// 判斷是否可往上回溯歷史 (更舊紀錄) 或多解向上捲動
 const canRecallUp = () => {
+    if (isMultiSolution) return resultCurrentTranslateY < -2;
     if (history.length === 0) return false;
     if (historyIndex === -1) return true; // 當前在草稿/空白畫面，可往上叫出最新一筆
     return historyIndex > 0; // 在歷史紀錄中，上方還有更舊紀錄
 };
 
-// 判斷是否可往下瀏覽歷史 (較新紀錄或草稿)
+// 判斷是否可往下瀏覽歷史 (較新紀錄或草稿) 或多解向下捲動
 const canRecallDown = () => {
+    if (isMultiSolution) return resultOverflowH > 2 && resultCurrentTranslateY > -(resultOverflowH - 2);
     if (history.length === 0 || historyIndex === -1) return false;
     return (historyIndex < history.length - 1) || Boolean(draftExpression && draftExpression.trim());
 };
@@ -73,6 +86,9 @@ const canRecallDown = () => {
 // 載入指定索引的歷史紀錄
 const recallCalculation = (index) => {
     if (index < 0 || index >= history.length) return;
+    if (isMultiSolution) {
+        setMultiSolutionMode(false);
+    }
     historyIndex = index;
     const item = history[index];
     
@@ -127,6 +143,9 @@ const handleRecallDown = () => {
         recallCalculation(historyIndex + 1);
         return true;
     } else if (historyIndex === history.length - 1) {
+        if (isMultiSolution) {
+            setMultiSolutionMode(false);
+        }
         historyIndex = -1;
         mf.value = draftExpression || '';
         resultEl.value = '0';
@@ -149,6 +168,8 @@ const handleRecallDown = () => {
 // ==========================================
 // 歷史紀錄彈窗視窗管理
 // ==========================================
+let historyMode = 'normal'; // 'normal' (檢視/帶入算式編輯) 或 'xans' (點選結果值帶入 xAns)
+
 const getHistoryPanel = () => document.getElementById('history-panel');
 const getHistoryList = () => document.getElementById('history-list');
 const getHistoryTitle = () => document.getElementById('history-title');
@@ -161,6 +182,87 @@ const updateHistoryPanelPosition = () => {
     }
 };
 
+const openHistoryForXAns = () => {
+    historyMode = 'xans';
+    showHistoryPanel();
+};
+
+const selectHistoryResultForXAns = (item) => {
+    if (!item) return;
+
+    // 取得該紀錄的結果值
+    const res = typeof item === 'string' ? '' : (item.result || '');
+    if (res && (res.includes('Math ERROR') || res.includes('ERROR'))) {
+        return;
+    }
+
+    let numVal = null;
+    let exactVal = null;
+
+    if (typeof item === 'object') {
+        if (item.lastNumericVal !== null && item.lastNumericVal !== undefined && !isNaN(item.lastNumericVal)) {
+            numVal = item.lastNumericVal;
+        }
+        if (item.lastExact && !item.lastExact.includes('ERROR') && !item.lastExact.includes('=') && !item.lastExact.includes('\\begin{array}')) {
+            exactVal = item.lastExact;
+        } else if (item.result && !item.result.includes('ERROR') && !item.result.includes('=') && !item.result.includes('\\begin{array}')) {
+            exactVal = item.result;
+        }
+    }
+
+    if (numVal === null) {
+        if (res) {
+            try {
+                if (ce) {
+                    const parsed = ce.parse(res).evaluate();
+                    const n = parsed && parsed.N ? Number(parsed.N().numericValue) : parseFloat(res);
+                    if (!isNaN(n)) numVal = n;
+                }
+            } catch(e) {}
+        }
+        if (numVal === null) {
+            numVal = parseFloat(res) || 0;
+        }
+    }
+
+    if (!exactVal) {
+        exactVal = String(numVal);
+    }
+
+    // 儲存至 xAns 全域變數與 localStorage
+    xAnsValue = numVal;
+    xAnsExact = exactVal;
+    try {
+        localStorage.setItem('casio_calc_xans_val', String(xAnsValue));
+        localStorage.setItem('casio_calc_xans_exact', xAnsExact);
+    } catch(e) {}
+
+    // 關閉歷史紀錄面板
+    hideHistoryPanel();
+
+    // 帶入 LED 螢幕
+    if (isEvaluated) {
+        mf.value = '\\operatorname{xAns}';
+        resultEl.value = '0';
+        isEvaluated = false;
+        historyIndex = -1;
+        draftExpression = '';
+        updateResultPaging(true);
+    } else {
+        if (!mf.value || !mf.value.trim()) {
+            mf.value = '\\operatorname{xAns}';
+        } else {
+            insertMath('\\operatorname{xAns}');
+        }
+    }
+
+    suppressSoftKeyboard();
+    mf.focus({ preventScroll: true });
+    mf.executeCommand('moveToMathfieldEnd');
+    removeHighlightBackgrounds();
+    updateIndicators();
+};
+
 const renderHistoryList = () => {
     const list = getHistoryList();
     const title = getHistoryTitle();
@@ -168,25 +270,36 @@ const renderHistoryList = () => {
     list.innerHTML = '';
 
     if (history.length === 0) {
-        if (title) title.textContent = '歷史紀錄 (0)';
+        if (title) title.textContent = historyMode === 'xans' ? '歷史紀錄 (0) - 暫無結果可選' : '歷史紀錄 (0)';
         const empty = document.createElement('div');
         empty.className = 'history-empty';
-        empty.textContent = '暫無計算歷史紀錄';
+        empty.textContent = historyMode === 'xans' ? '暫無可帶入 xAns 的計算歷史' : '暫無計算歷史紀錄';
         list.appendChild(empty);
         return;
     }
 
-    if (title) title.textContent = `歷史紀錄 (${history.length})`;
+    if (title) {
+        if (historyMode === 'xans') {
+            title.textContent = `選擇 xAns 結果值 (${history.length})`;
+        } else {
+            title.textContent = `歷史紀錄 (${history.length})`;
+        }
+    }
 
     // 最新紀錄排在最上方
     const reversed = history.slice().reverse();
     reversed.forEach((item) => {
         const expr = typeof item === 'string' ? item : (item.expression || '');
         const res = typeof item === 'string' ? '' : (item.result || '');
+        const isError = res && res.includes('ERROR');
 
         const card = document.createElement('div');
-        card.className = 'history-item';
-        card.title = '點選將此計算式帶入螢幕重新編輯';
+        card.className = 'history-item' + (historyMode === 'xans' ? ' is-xans-mode' : '');
+        card.title = historyMode === 'xans' ? '點選將此計算結果值帶入 xAns' : '點選將此計算式帶入螢幕重新編輯';
+        if (historyMode === 'xans' && isError) {
+            card.style.opacity = '0.5';
+            card.style.cursor = 'not-allowed';
+        }
 
         // 算式欄位
         const mfExp = document.createElement('math-field');
@@ -201,6 +314,13 @@ const renderHistoryList = () => {
         if (res && res !== '0') {
             const resWrap = document.createElement('div');
             resWrap.className = 'history-item-res-wrapper';
+
+            if (historyMode === 'xans' && !isError) {
+                const tag = document.createElement('span');
+                tag.className = 'history-item-xans-tag';
+                tag.textContent = 'xAns 帶入';
+                resWrap.appendChild(tag);
+            }
 
             const eqSpan = document.createElement('span');
             eqSpan.className = 'history-item-eq';
@@ -218,9 +338,15 @@ const renderHistoryList = () => {
             card.appendChild(resWrap);
         }
 
-        // 點選就將選中的計算式帶入led螢幕可重新編輯計算式，帶入計算式顯示於led螢幕後並關閉紀錄視窗
+        // 點選就將選中的計算式帶入led螢幕可重新編輯計算式，或在 xans 模式下將結果帶入 xAns
         card.addEventListener('click', () => {
-            selectHistoryItem(expr);
+            if (historyMode === 'xans') {
+                if (!isError) {
+                    selectHistoryResultForXAns(item);
+                }
+            } else {
+                selectHistoryItem(expr);
+            }
         });
 
         list.appendChild(card);
@@ -254,6 +380,7 @@ const hideHistoryPanel = () => {
     const panel = getHistoryPanel();
     if (!panel) return;
     panel.style.display = 'none';
+    historyMode = 'normal';
 };
 
 const toggleHistoryPanel = () => {
@@ -330,6 +457,17 @@ const suppressSoftKeyboard = () => {
     }
 };
 
+// 切換虛擬鍵盤 (叫出 / 關閉)
+const toggleVirtualKeyboard = () => {
+    if (!window.mathVirtualKeyboard) return;
+    if (window.mathVirtualKeyboard.visible) {
+        window.mathVirtualKeyboard.hide();
+    } else {
+        mf.focus({ preventScroll: true });
+        window.mathVirtualKeyboard.show();
+    }
+};
+
 // 綁定虛擬鍵盤切換圖示 (點擊 toggle virtual keyboard 按鈕時召喚/收合鍵盤，平日點擊其他按鈕則不跳出)
 const setupVirtualKeyboardToggle = () => {
     if (!mf || !mf.shadowRoot) return;
@@ -339,13 +477,7 @@ const setupVirtualKeyboardToggle = () => {
         const toggleHandler = (e) => {
             e.stopPropagation();
             e.preventDefault();
-            if (window.mathVirtualKeyboard) {
-                if (window.mathVirtualKeyboard.visible) {
-                    window.mathVirtualKeyboard.hide();
-                } else {
-                    window.mathVirtualKeyboard.show();
-                }
-            }
+            toggleVirtualKeyboard();
         };
         toggle.addEventListener('pointerdown', toggleHandler);
         toggle.addEventListener('click', toggleHandler);
@@ -382,7 +514,7 @@ const removeHighlightBackgrounds = () => {
                     .ML__focused .ML__selected {
                         background: transparent !important;
                         background-color: transparent !important;
-                        color: inherit !important;
+                        color: hsl(212, 40%, 49%) !important;
                     }
                     .ML__placeholder {
                         background: transparent !important;
@@ -403,6 +535,10 @@ const removeHighlightBackgrounds = () => {
                         margin-bottom: 0 !important;
                         overflow: visible !important;
                     }
+                    :host(.is-multi-solution) {
+                        align-items: flex-start !important;
+                        justify-content: flex-start !important;
+                    }
                     .ML__container, .ML__field-container {
                         background: transparent !important;
                         display: flex !important;
@@ -413,12 +549,20 @@ const removeHighlightBackgrounds = () => {
                         min-height: 0 !important;
                         overflow: visible !important;
                     }
+                    :host(.is-multi-solution) .ML__container,
+                    :host(.is-multi-solution) .ML__field-container {
+                        align-items: flex-start !important;
+                        justify-content: flex-start !important;
+                    }
                     .ML__content {
                         align-self: flex-end !important;
                         padding-bottom: 0 !important;
                         margin-bottom: 0 !important;
                         overflow: visible !important;
                         will-change: transform;
+                    }
+                    :host(.is-multi-solution) .ML__content {
+                        align-self: flex-start !important;
                     }
                     ` : `
                     .ML__content {
@@ -459,7 +603,11 @@ const updateIndicators = () => {
     const indDown = document.querySelector('.indicators .ind-down');
     const indRight = document.querySelector('.indicators .ind-right');
 
-    if (isEvaluated && resultTotalPages > 1) {
+    if (isMultiSolution) {
+        // 多解水平指示器：左方若有未顯示內容 (translateX < -2) 則亮 ◀，右方若有未顯示內容則亮 ▶
+        if (indLeft) indLeft.style.color = (resultCurrentTranslateX < -2) ? '#111' : 'transparent';
+        if (indRight) indRight.style.color = (resultOverflowW > 2 && resultCurrentTranslateX > -(resultOverflowW - 2)) ? '#111' : 'transparent';
+    } else if (isEvaluated && resultTotalPages > 1) {
         // 結果過長時：左方若有未顯示內容 (translateX < overflowW) 則亮 ◀，右方若有未顯示內容 (translateX > 0) 則亮 ▶
         if (indLeft) indLeft.style.color = (resultCurrentTranslateX < resultOverflowW - 3) ? '#111' : 'transparent';
         if (indRight) indRight.style.color = (resultCurrentTranslateX > 3) ? '#111' : 'transparent';
@@ -660,9 +808,155 @@ let resultTotalPages = 1;
 let resultOverflowW = 0;
 let resultCurrentTranslateX = 0;
 
+// 多解方程式展開模式設定
+const setMultiSolutionMode = (active) => {
+    isMultiSolution = Boolean(active);
+    const vp = document.getElementById('result-viewport');
+    const exp = document.getElementById('expression') || mf;
+
+    if (isMultiSolution) {
+        if (vp) vp.classList.add('is-multi-solution');
+        if (exp) exp.classList.add('is-multi-solution');
+        if (resultEl) resultEl.classList.add('is-multi-solution');
+        resultCurrentTranslateY = 0;
+        resultCurrentTranslateX = 0;
+        resultOverflowH = 0;
+        resultOverflowW = 0;
+        removeHighlightBackgrounds();
+        setTimeout(() => updateResultScrollBounds(true), 30);
+    } else {
+        if (vp) {
+            vp.classList.remove('is-multi-solution', 'is-overflowing', 'is-dragging');
+        }
+        if (exp) exp.classList.remove('is-multi-solution');
+        if (resultEl) {
+            resultEl.classList.remove('is-multi-solution');
+            const sr = resultEl.shadowRoot;
+            const content = sr ? sr.querySelector('.ML__content') : null;
+            if (content) {
+                content.style.transform = '';
+                content.style.transition = '';
+            }
+        }
+        resultCurrentTranslateY = 0;
+        resultCurrentTranslateX = 0;
+        resultOverflowH = 0;
+        resultOverflowW = 0;
+        removeHighlightBackgrounds();
+        updateIndicators();
+    }
+};
+
+// 計算多解垂直與水平捲動範圍與指示器
+const updateResultScrollBounds = (resetToZero = false) => {
+    if (!resultEl) return;
+    const sr = resultEl.shadowRoot;
+    const content = sr ? sr.querySelector('.ML__content') : null;
+    const vp = document.getElementById('result-viewport') || resultEl;
+
+    if (!content || !isEvaluated || !isMultiSolution) {
+        resultOverflowH = 0;
+        resultOverflowW = 0;
+        resultCurrentTranslateY = 0;
+        resultCurrentTranslateX = 0;
+        if (content) {
+            content.style.transform = '';
+            content.style.transition = '';
+        }
+        if (vp) vp.classList.remove('is-overflowing');
+        updateIndicators();
+        return;
+    }
+
+    const contentH = content.getBoundingClientRect().height;
+    const contentW = content.getBoundingClientRect().width;
+    const viewH = vp.clientHeight || 90;
+    const viewW = resultEl.clientWidth || vp.clientWidth || 276;
+
+    resultOverflowH = Math.max(0, contentH - viewH);
+    resultOverflowW = Math.max(0, contentW - viewW);
+
+    if (resetToZero) {
+        resultCurrentTranslateY = 0;
+        resultCurrentTranslateX = 0;
+        content.style.transition = 'none';
+        content.style.transform = 'translate(0px, 0px)';
+    } else {
+        resultCurrentTranslateY = Math.max(-resultOverflowH, Math.min(0, resultCurrentTranslateY));
+        resultCurrentTranslateX = Math.max(-resultOverflowW, Math.min(0, resultCurrentTranslateX));
+        content.style.transform = `translate(${resultCurrentTranslateX}px, ${resultCurrentTranslateY}px)`;
+    }
+
+    if (resultOverflowH > 2 || resultOverflowW > 2) {
+        vp.classList.add('is-overflowing');
+    } else {
+        vp.classList.remove('is-overflowing');
+    }
+
+    updateIndicators();
+};
+
+const scrollMultiSolutionUp = () => {
+    if (!isMultiSolution || resultCurrentTranslateY >= -2) return false;
+    const sr = resultEl.shadowRoot;
+    const content = sr ? sr.querySelector('.ML__content') : null;
+    if (!content) return false;
+
+    resultCurrentTranslateY = Math.min(0, resultCurrentTranslateY + 28);
+    content.style.transition = 'transform 0.15s ease-out';
+    content.style.transform = `translate(${resultCurrentTranslateX}px, ${resultCurrentTranslateY}px)`;
+    updateIndicators();
+    return true;
+};
+
+const scrollMultiSolutionDown = () => {
+    if (!isMultiSolution || resultOverflowH <= 2 || resultCurrentTranslateY <= -(resultOverflowH - 2)) return false;
+    const sr = resultEl.shadowRoot;
+    const content = sr ? sr.querySelector('.ML__content') : null;
+    if (!content) return false;
+
+    resultCurrentTranslateY = Math.max(-resultOverflowH, resultCurrentTranslateY - 28);
+    content.style.transition = 'transform 0.15s ease-out';
+    content.style.transform = `translate(${resultCurrentTranslateX}px, ${resultCurrentTranslateY}px)`;
+    updateIndicators();
+    return true;
+};
+
+const scrollMultiSolutionLeft = () => {
+    if (!isMultiSolution || resultCurrentTranslateX >= -2) return false;
+    const sr = resultEl.shadowRoot;
+    const content = sr ? sr.querySelector('.ML__content') : null;
+    if (!content) return false;
+
+    const step = Math.max(60, (resultEl.clientWidth || 276) * 0.4);
+    resultCurrentTranslateX = Math.min(0, resultCurrentTranslateX + step);
+    content.style.transition = 'transform 0.15s ease-out';
+    content.style.transform = `translate(${resultCurrentTranslateX}px, ${resultCurrentTranslateY}px)`;
+    updateIndicators();
+    return true;
+};
+
+const scrollMultiSolutionRight = () => {
+    if (!isMultiSolution || resultOverflowW <= 2 || resultCurrentTranslateX <= -(resultOverflowW - 2)) return false;
+    const sr = resultEl.shadowRoot;
+    const content = sr ? sr.querySelector('.ML__content') : null;
+    if (!content) return false;
+
+    const step = Math.max(60, (resultEl.clientWidth || 276) * 0.4);
+    resultCurrentTranslateX = Math.max(-resultOverflowW, resultCurrentTranslateX - step);
+    content.style.transition = 'transform 0.15s ease-out';
+    content.style.transform = `translate(${resultCurrentTranslateX}px, ${resultCurrentTranslateY}px)`;
+    updateIndicators();
+    return true;
+};
+
 // 更新計算解分頁狀態
 const updateResultPaging = (resetToPageZero = true) => {
     if (!resultEl) return;
+    if (isMultiSolution) {
+        updateResultScrollBounds(resetToPageZero);
+        return;
+    }
     const sr = resultEl.shadowRoot;
     const content = sr ? sr.querySelector('.ML__content') : null;
     const vp = document.getElementById('result-viewport') || resultEl;
@@ -751,6 +1045,9 @@ const applyResultPage = (page) => {
 };
 
 const pageResultLeft = () => {
+    if (isMultiSolution) {
+        return scrollMultiSolutionLeft();
+    }
     if (isEvaluated && resultTotalPages > 1) {
         if (resultPage > 0) {
             applyResultPage(resultPage - 1);
@@ -762,6 +1059,9 @@ const pageResultLeft = () => {
 };
 
 const pageResultRight = () => {
+    if (isMultiSolution) {
+        return scrollMultiSolutionRight();
+    }
     if (isEvaluated && resultTotalPages > 1) {
         if (resultPage < resultTotalPages - 1) {
             applyResultPage(resultPage + 1);
@@ -884,7 +1184,7 @@ const attachExpressionDrag = () => {
     });
 };
 
-// 綁定輸出區 (result) 滑鼠與觸控連續拖曳與滑動分頁
+// 綁定輸出區 (result) 滑鼠與觸控連續拖曳與滑動分頁 / 垂直多解檢視
 const attachResultDragAndSwipe = () => {
     const vp = document.getElementById('result-viewport') || resultEl;
     if (!vp || vp._hasResultDrag) return;
@@ -894,29 +1194,75 @@ const attachResultDragAndSwipe = () => {
 
     let isResDragging = false;
     let resStartX = 0;
-    let resStartTranslate = 0;
+    let resStartY = 0;
+    let resStartTranslateX = 0;
+    let resStartTranslateY = 0;
     let resMoved = false;
 
-    const startDrag = (clientX) => {
+    const startDrag = (clientX, clientY) => {
         const c = getResContent();
-        if (!c || !isEvaluated || resultOverflowW <= 3) return false;
+        if (!c || !isEvaluated) return false;
+
+        if (isMultiSolution) {
+            // 只要垂直或水平任一方向有溢出，即允許拖曳
+            if (resultOverflowH <= 2 && resultOverflowW <= 2) return false;
+            isResDragging = true;
+            resMoved = false;
+            resStartX = clientX;
+            resStartY = clientY;
+            resStartTranslateX = resultCurrentTranslateX;
+            resStartTranslateY = resultCurrentTranslateY;
+            c.style.transition = 'none';
+            vp.classList.add('is-dragging');
+            return true;
+        }
+
+        if (resultOverflowW <= 3) return false;
         isResDragging = true;
         resMoved = false;
         resStartX = clientX;
-        resStartTranslate = resultCurrentTranslateX;
+        resStartTranslateX = resultCurrentTranslateX;
         c.style.transition = 'none'; // ⭐️ 拖曳時立即跟手
         vp.classList.add('is-dragging');
         return true;
     };
 
-    const moveDrag = (clientX) => {
+    const moveDrag = (clientX, clientY) => {
         if (!isResDragging) return false;
         const c = getResContent();
         if (!c) return false;
+
+        if (isMultiSolution) {
+            const dx = clientX - resStartX;
+            const dy = clientY - resStartY;
+            let moved = false;
+
+            if (resultOverflowW > 2 && Math.abs(dx) > 1) {
+                let nextX = resStartTranslateX + dx;
+                nextX = Math.max(-resultOverflowW, Math.min(0, nextX));
+                resultCurrentTranslateX = nextX;
+                moved = true;
+            }
+            if (resultOverflowH > 2 && Math.abs(dy) > 1) {
+                let nextY = resStartTranslateY + dy;
+                nextY = Math.max(-resultOverflowH, Math.min(0, nextY));
+                resultCurrentTranslateY = nextY;
+                moved = true;
+            }
+
+            if (moved) {
+                resMoved = true;
+                c.style.transform = `translate(${resultCurrentTranslateX}px, ${resultCurrentTranslateY}px)`;
+                updateIndicators();
+                return true;
+            }
+            return false;
+        }
+
         const dx = clientX - resStartX;
         if (Math.abs(dx) > 2) {
             resMoved = true;
-            let nextX = resStartTranslate + dx;
+            let nextX = resStartTranslateX + dx;
             // 限制在 [0, resultOverflowW] 區間
             nextX = Math.max(0, Math.min(resultOverflowW, nextX));
             resultCurrentTranslateX = nextX;
@@ -927,12 +1273,21 @@ const attachResultDragAndSwipe = () => {
         return false;
     };
 
-    const endDrag = (clientX) => {
+    const endDrag = (clientX, clientY) => {
         if (!isResDragging) return;
         isResDragging = false;
         vp.classList.remove('is-dragging');
         const c = getResContent();
         if (!c) return;
+
+        if (isMultiSolution) {
+            c.style.transition = 'transform 0.15s cubic-bezier(0.2, 0, 0, 1)';
+            resultCurrentTranslateX = Math.max(-resultOverflowW, Math.min(0, resultCurrentTranslateX));
+            resultCurrentTranslateY = Math.max(-resultOverflowH, Math.min(0, resultCurrentTranslateY));
+            c.style.transform = `translate(${resultCurrentTranslateX}px, ${resultCurrentTranslateY}px)`;
+            updateIndicators();
+            return;
+        }
 
         c.style.transition = 'transform 0.18s cubic-bezier(0.2, 0, 0, 1)';
 
@@ -952,13 +1307,13 @@ const attachResultDragAndSwipe = () => {
 
     // 1. Pointer Events (Desktop 與 Mobile)
     vp.addEventListener('pointerdown', (e) => {
-        if (startDrag(e.clientX)) {
+        if (startDrag(e.clientX, e.clientY)) {
             try { vp.setPointerCapture(e.pointerId); } catch(err) {}
         }
     });
 
     vp.addEventListener('pointermove', (e) => {
-        if (moveDrag(e.clientX)) {
+        if (moveDrag(e.clientX, e.clientY)) {
             e.preventDefault();
         }
     });
@@ -966,7 +1321,7 @@ const attachResultDragAndSwipe = () => {
     const releasePointer = (e) => {
         if (isResDragging) {
             try { vp.releasePointerCapture(e.pointerId); } catch(err) {}
-            endDrag(e.clientX);
+            endDrag(e.clientX, e.clientY);
         }
     };
     vp.addEventListener('pointerup', releasePointer);
@@ -975,20 +1330,48 @@ const attachResultDragAndSwipe = () => {
     // 2. Touch Events (Mobile 專屬防滾動)
     vp.addEventListener('touchstart', (e) => {
         if (e.touches && e.touches.length === 1) {
-            startDrag(e.touches[0].clientX);
+            startDrag(e.touches[0].clientX, e.touches[0].clientY);
         }
     }, { passive: true });
 
     vp.addEventListener('touchmove', (e) => {
-        if (e.touches && e.touches.length === 1 && moveDrag(e.touches[0].clientX)) {
+        if (e.touches && e.touches.length === 1 && moveDrag(e.touches[0].clientX, e.touches[0].clientY)) {
             e.preventDefault();
         }
     }, { passive: false });
 
     vp.addEventListener('touchend', (e) => {
         const clientX = e.changedTouches && e.changedTouches[0] ? e.changedTouches[0].clientX : resStartX;
-        endDrag(clientX);
+        const clientY = e.changedTouches && e.changedTouches[0] ? e.changedTouches[0].clientY : resStartY;
+        endDrag(clientX, clientY);
     }, { passive: true });
+
+    // 3. 滾輪支援 (桌面端滾動多解)
+    vp.addEventListener('wheel', (e) => {
+        if (!isMultiSolution) return;
+        const c = getResContent();
+        if (!c) return;
+
+        let handled = false;
+        if (resultOverflowH > 2 && !e.shiftKey && Math.abs(e.deltaY) >= Math.abs(e.deltaX || 0)) {
+            e.preventDefault();
+            const step = e.deltaY > 0 ? -28 : 28;
+            resultCurrentTranslateY = Math.max(-resultOverflowH, Math.min(0, resultCurrentTranslateY + step));
+            handled = true;
+        } else if (resultOverflowW > 2) {
+            e.preventDefault();
+            const delta = (Math.abs(e.deltaX) > 0) ? e.deltaX : e.deltaY;
+            const step = delta > 0 ? -35 : 35;
+            resultCurrentTranslateX = Math.max(-resultOverflowW, Math.min(0, resultCurrentTranslateX + step));
+            handled = true;
+        }
+
+        if (handled) {
+            c.style.transition = 'transform 0.1s ease-out';
+            c.style.transform = `translate(${resultCurrentTranslateX}px, ${resultCurrentTranslateY}px)`;
+            updateIndicators();
+        }
+    }, { passive: false });
 };
 
 attachExpressionDrag();
@@ -1068,6 +1451,9 @@ if (window.ComputeEngine) {
 }
 
 mf.addEventListener('input', () => {
+    if (isMultiSolution) {
+        setMultiSolutionMode(false);
+    }
     isEvaluated = false;
     historyIndex = -1;
     draftExpression = '';
@@ -1077,6 +1463,9 @@ mf.addEventListener('input', () => {
 });
 
 const insertMath = (latex) => {
+    if (isMultiSolution) {
+        setMultiSolutionMode(false);
+    }
     if (isEvaluated) {
         // 若運算完畢直接按四則運算符號或平方，自動延續 Ans
         const isOp = ['+', '-', '\\times ', '\\div ', '/', '^2', '^{#0}', '^{-1}'].includes(latex);
@@ -1209,13 +1598,15 @@ const evaluateExpression = () => {
             resultEl.value = '\\text{載入中...}';
             return;
         }
+        setMultiSolutionMode(false);
         syncAngleMode();
 
         let rawLatex = mf.value;
 
-        // 1. 替換 Ans 與 PreAns (包含解開被意外包裹在 \text{...} 內的 Ans/運算式，並消除任何前綴如 \operatorname, \mathrm, \text)
+        // 1. 替換 Ans、PreAns 與 xAns (包含解開被意外包裹在 \text{...} 內的 Ans/運算式，並消除任何前綴如 \operatorname, \mathrm, \text)
         const ansSubVal = (ansExact && !ansExact.includes('ERROR') && !ansExact.includes('=')) ? ansExact : ansValue;
         const preAnsSubVal = (preAnsExact && !preAnsExact.includes('ERROR') && !preAnsExact.includes('=')) ? preAnsExact : preAnsValue;
+        const xAnsSubVal = (xAnsExact && !xAnsExact.includes('ERROR') && !xAnsExact.includes('=')) ? xAnsExact : xAnsValue;
 
         const replaceAnsToken = (str, tokenName, subVal) => {
             let res = str;
@@ -1224,7 +1615,7 @@ const evaluateExpression = () => {
             
             // 1.1 若包裹在 \text{...} 且包含其他運算子，先解開
             res = res.replace(/\\text\{([^{}]*?)\}/g, (match, inner) => {
-                if (new RegExp('\\b' + tokenName + '\\b').test(inner) && /[\/\+\-\*]|\\div|\\times/.test(inner)) {
+                if (new RegExp('\\b' + tokenName + '\\b', 'i').test(inner) && /[\/\+\-\*]|\\div|\\times/.test(inner)) {
                     return inner;
                 }
                 return match;
@@ -1232,22 +1623,33 @@ const evaluateExpression = () => {
 
             // 1.2 反覆剝除任何可能巢狀包裹在變數外層的格式前綴 (\operatorname, \mathrm, \text, \mathbf, \mathit 等)
             // 例如 MathLive 常見的 \operatorname{\mathrm{Ans}} 或 {\operatorname{\mathrm{Ans}}}
+            // 關鍵：替換時前後加上空格，確保與前方指令 (如 \times, \div 等) 保持間距，避免粘連成 \timesAns 或 \divAns
             const reWrapper = new RegExp('\\\\(?:operatorname\\*?|mathrm|text|mathbf|mathit)\\s*\\{\\s*' + tokenName + '\\s*\\}', 'gi');
             const reNoBraces = new RegExp('\\\\(?:operatorname\\*?|mathrm|text|mathbf|mathit)\\s+' + tokenName + '\\b', 'gi');
             let prev;
             do {
                 prev = res;
-                res = res.replace(reWrapper, tokenName);
-                res = res.replace(reNoBraces, tokenName);
+                res = res.replace(reWrapper, ' ' + tokenName + ' ');
+                res = res.replace(reNoBraces, ' ' + tokenName + ' ');
             } while (res !== prev);
 
-            // 1.3 變數已徹底純淨化，替換為數值 (若純數值則不額外加括號，負數或算式才加 \left( \right))
+            // 1.3 隱式乘法處理：
+            // 若變數前面緊鄰數字或右括號 (例如 3Ans 或 )Ans)，自動補上乘號 \times
+            const reImplicitBefore = new RegExp('([0-9.]|\\)|\\\\right\\))\\s*' + tokenName + '\\b', 'gi');
+            res = res.replace(reImplicitBefore, '$1\\times ' + tokenName);
+
+            // 若變數後面緊鄰數字或左括號 (例如 Ans3 或 Ans()，自動補上乘號 \times
+            const reImplicitAfter = new RegExp('\\b' + tokenName + '\\s*([0-9.]|\\(|\\\\left\\()', 'gi');
+            res = res.replace(reImplicitAfter, tokenName + '\\times $1');
+
+            // 1.4 變數已徹底純淨化，替換為數值 (若純數值則不額外加括號，負數或算式才加 \left( \right))
             const rePlain = new RegExp('\\b' + tokenName + '\\b', 'gi');
-            res = res.replace(rePlain, wrappedVal);
+            res = res.replace(rePlain, ' ' + wrappedVal + ' ');
             return res;
         };
 
         let mathStr = replaceAnsToken(rawLatex, 'PreAns', preAnsSubVal);
+        mathStr = replaceAnsToken(mathStr, 'xAns', xAnsSubVal);
         mathStr = replaceAnsToken(mathStr, 'Ans', ansSubVal);
 
         // 1.6 解開任何殘留於 \text{...} 內的四則運算子與斜線除號
@@ -1488,12 +1890,46 @@ const evaluateExpression = () => {
                 if (!solutions || solutions.length === 0) {
                     solutions = eqExpr.solve('x');
                 }
+                if (!solutions || solutions.length === 0) {
+                    solutions = eqExpr.solve();
+                }
             } catch(e) {}
 
             if (solutions && solutions.length > 0) {
-                const solLatex = solutions.map(s => s.latex || String(s)).join(',\\ ');
-                lastExact = 'X = ' + solLatex;
-                lastDecimal = lastExact;
+                // 若為多個實數解，依數值大小升序排序 (x_1 <= x_2 <= ...)
+                try {
+                    const allReal = solutions.every(s => s.N && !isNaN(Number(s.N().numericValue)));
+                    if (allReal && solutions.length > 1) {
+                        solutions.sort((a, b) => Number(a.N().numericValue) - Number(b.N().numericValue));
+                    }
+                } catch(e) {}
+
+                const formatSol = (s, isDec) => {
+                    if (isDec && s.N) {
+                        try {
+                            const nVal = Number(s.N().numericValue);
+                            if (!isNaN(nVal)) {
+                                return String(Math.round(nVal * 10000000000) / 10000000000);
+                            }
+                        } catch(e) {}
+                    }
+                    return s.latex || String(s);
+                };
+
+                if (solutions.length === 1) {
+                    const ex = formatSol(solutions[0], false);
+                    const dec = formatSol(solutions[0], true);
+                    lastExact = 'x = ' + ex;
+                    lastDecimal = 'x = ' + dec;
+                    setMultiSolutionMode(false);
+                } else {
+                    const exactRows = solutions.map((s, idx) => `x_{${idx + 1}} = ${formatSol(s, false)}`);
+                    const decimalRows = solutions.map((s, idx) => `x_{${idx + 1}} = ${formatSol(s, true)}`);
+                    lastExact = '\\begin{array}{l} ' + exactRows.join(' \\\\ ') + ' \\end{array}';
+                    lastDecimal = '\\begin{array}{l} ' + decimalRows.join(' \\\\ ') + ' \\end{array}';
+                    setMultiSolutionMode(true);
+                }
+
                 let firstVal = Number(solutions[0].N ? solutions[0].N().numericValue : solutions[0]);
                 if (!isNaN(firstVal)) {
                     lastNumericVal = firstVal;
@@ -1503,8 +1939,11 @@ const evaluateExpression = () => {
                     preAnsExact = ansExact;
                     ansExact = String(firstVal);
                 }
-                resultEl.value = lastExact;
+                resultEl.value = (defaultFormat === 'D' && lastDecimal) ? lastDecimal : lastExact;
                 isEvaluated = true;
+                removeHighlightBackgrounds();
+                updateIndicators();
+                setTimeout(() => updateResultPaging(true), 40);
                 return;
             }
         }
@@ -1516,14 +1955,18 @@ const evaluateExpression = () => {
             let prev;
             do {
                 prev = mathStr;
-                mathStr = mathStr.replace(reWrapper, v);
-                mathStr = mathStr.replace(reNoBraces, v);
+                mathStr = mathStr.replace(reWrapper, ' ' + v + ' ');
+                mathStr = mathStr.replace(reNoBraces, ' ' + v + ' ');
             } while (mathStr !== prev);
+
+            // 隱式乘法支援 (如 3A 或 )A 自動補 \times)
+            mathStr = mathStr.replace(new RegExp('([0-9.]|\\)|\\\\right\\))\\s*' + v + '\\b', 'g'), '$1\\times ' + v);
+            mathStr = mathStr.replace(new RegExp('\\b' + v + '\\s*([0-9.]|\\(|\\\\left\\()', 'g'), v + '\\times $1');
 
             const reg = new RegExp('\\b' + v + '\\b', 'g');
             const strVal = String(memoryVars[v]);
             const wrappedVal = /^[\d.]+$/.test(strVal) ? strVal : '\\left(' + strVal + '\\right)';
-            mathStr = mathStr.replace(reg, wrappedVal);
+            mathStr = mathStr.replace(reg, ' ' + wrappedVal + ' ');
         });
         if (!mathStr.includes('dx') && !mathStr.includes('\\frac{d}{dx}')) {
             const reWrapper = new RegExp('\\\\(?:operatorname\\*?|mathrm|text|mathbf|mathit)\\s*\\{\\s*X\\s*\\}', 'gi');
@@ -1531,13 +1974,16 @@ const evaluateExpression = () => {
             let prev;
             do {
                 prev = mathStr;
-                mathStr = mathStr.replace(reWrapper, 'X');
-                mathStr = mathStr.replace(reNoBraces, 'X');
+                mathStr = mathStr.replace(reWrapper, ' X ');
+                mathStr = mathStr.replace(reNoBraces, ' X ');
             } while (mathStr !== prev);
+
+            mathStr = mathStr.replace(/([0-9.]|\)|\\right\))\s*X\b/g, '$1\\times X');
+            mathStr = mathStr.replace(/\bX\s*([0-9.]|\(|\\left\()/g, 'X\\times $1');
 
             const strVal = String(memoryVars.X);
             const wrappedVal = /^[\d.]+$/.test(strVal) ? strVal : '\\left(' + strVal + '\\right)';
-            mathStr = mathStr.replace(/\bX\b/g, wrappedVal);
+            mathStr = mathStr.replace(/\bX\b/g, ' ' + wrappedVal + ' ');
         }
 
         // 9. 使用 Compute Engine 計算
@@ -1750,19 +2196,21 @@ document.querySelectorAll('.btn').forEach(btn => {
             isHyp = !isHyp;
             return;
         }
-        if (val === 'mode') {
+        if (val === 'vkey' || val === 'mode') {
             if (isShift) {
-                // SHIFT + MODE (SETUP 功能)：切換永久預設輸出格式 S (MathO) 或 D (LineIO/小數)
+                // SHIFT + V-key (SETUP 功能)：切換永久預設輸出格式 S (MathO) 或 D (LineIO/小數)
                 toggleMathMode();
                 isShift = false;
+                updateIndicators();
                 return;
             }
-            cycleAngleMode();
+            toggleVirtualKeyboard();
             return;
         }
 
         // 4. 重置與清除
         if (val === 'ac') {
+            setMultiSolutionMode(false);
             mf.value = '';
             resultEl.value = '0';
             isEvaluated = false;
@@ -1787,11 +2235,15 @@ document.querySelectorAll('.btn').forEach(btn => {
             isShift = false;
             isAlpha = false;
             updateIndicators();
+            historyMode = 'normal';
             toggleHistoryPanel();
             return;
         }
 
         if (val === 'del') {
+            if (isMultiSolution) {
+                setMultiSolutionMode(false);
+            }
             if (isEvaluated) {
                 mf.value = '';
                 resultEl.value = '0';
@@ -1808,11 +2260,18 @@ document.querySelectorAll('.btn').forEach(btn => {
 
         // 5. CLR (Shift + 9)
         if (val === '9' && isShift) {
+            setMultiSolutionMode(false);
             Object.keys(memoryVars).forEach(k => memoryVars[k] = 0);
             ansValue = 0;
             preAnsValue = 0;
             ansExact = '0';
             preAnsExact = '0';
+            xAnsValue = 0;
+            xAnsExact = '0';
+            try {
+                localStorage.removeItem('casio_calc_xans_val');
+                localStorage.removeItem('casio_calc_xans_exact');
+            } catch(e) {}
             history = [];
             historyIndex = -1;
             draftExpression = '';
@@ -1975,7 +2434,15 @@ document.querySelectorAll('.btn').forEach(btn => {
             }
         }
 
-        // 13. 一般符號、Shift 符號與 Alpha 符號插入
+        // 13. Ans 鍵的 ALPHA (xAns) 處理：叫出歷史紀錄視窗選擇結果值
+        if (val === 'ans' && isAlpha) {
+            isAlpha = false;
+            updateIndicators();
+            openHistoryForXAns();
+            return;
+        }
+
+        // 14. 一般符號、Shift 符號與 Alpha 符號插入
         let latex = val;
 
         // SHIFT 映射表
@@ -2061,7 +2528,7 @@ document.querySelectorAll('.btn').forEach(btn => {
                 const posBefore = mf.position;
                 mf.executeCommand('extendToPreviousWord');
                 const prevWord = mf.getValue(mf.selection);
-                if (prevWord && (/^[\d.]+$/.test(prevWord.trim()) || /^(?:Ans|PreAns|[A-F]|X|Y|M|\\operatorname\{Ans\})$/i.test(prevWord.trim()))) {
+                if (prevWord && (/^[\d.]+$/.test(prevWord.trim()) || /^(?:Ans|PreAns|xAns|[A-F]|X|Y|M|\\operatorname\{Ans\})$/i.test(prevWord.trim()))) {
                     // 保留選取以自動填入第一方格 {#0}
                 } else {
                     // 非前置運算元則還原游標位置，產生兩空白方格
@@ -2207,6 +2674,9 @@ const attachDPad = () => {
     });
 
     if (dUp) dUp.addEventListener('click', () => {
+        if (isMultiSolution) {
+            if (scrollMultiSolutionUp()) return;
+        }
         if (isEvaluated || historyIndex >= 0 || !mf.value || !mf.value.trim()) {
             if (handleRecallUp()) {
                 return;
@@ -2218,6 +2688,9 @@ const attachDPad = () => {
     });
 
     if (dDown) dDown.addEventListener('click', () => {
+        if (isMultiSolution) {
+            if (scrollMultiSolutionDown()) return;
+        }
         if (isEvaluated || historyIndex >= 0 || !mf.value || !mf.value.trim()) {
             if (handleRecallDown()) {
                 return;
@@ -2235,6 +2708,9 @@ const attachDPad = () => {
         suppressSoftKeyboard();
         mf.focus({ preventScroll: true });
         if (isEvaluated) {
+            if (isMultiSolution) {
+                setMultiSolutionMode(false);
+            }
             isEvaluated = false;
             historyIndex = -1;
             draftExpression = '';
@@ -2252,6 +2728,9 @@ const attachDPad = () => {
         suppressSoftKeyboard();
         mf.focus({ preventScroll: true });
         if (isEvaluated) {
+            if (isMultiSolution) {
+                setMultiSolutionMode(false);
+            }
             isEvaluated = false;
             historyIndex = -1;
             draftExpression = '';
