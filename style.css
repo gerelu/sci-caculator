@@ -42,9 +42,9 @@ body {
     margin-bottom: 6px; /* 增加此數值即可將整個按鈕區往下推，加大 SHIFT 上方空間 */
     box-shadow: inset 0 3px 8px rgba(0,0,0,0.4);
     box-sizing: border-box;
-    height: 193px;
-    min-height: 193px;
-    max-height: 193px;
+    height: 213px;      /* ⭐️ 外框高度 */
+    min-height: 213px;  /* ⭐️ 外框最小高度 */
+    max-height: 213px;  /* ⭐️ 外框最大高度 */
 }
 
 .screen {
@@ -53,9 +53,9 @@ body {
     color: #111;
     display: flex;
     flex-direction: column;
-    height: 175px;
-    min-height: 175px;
-    max-height: 175px;
+    height: 195px;      /* ⭐️ 內部螢幕高度 */
+    min-height: 195px;  /* ⭐️ 內部螢幕最小高度 */
+    max-height: 195px;  /* ⭐️ 內部螢幕最大高度 */
     box-sizing: border-box;
 }
 
@@ -97,16 +97,16 @@ body {
 
 /* 四個箭頭一起微調 */
 .indicators .ind-left {
-    transform: translate(-43px, -2px); /* ⭐️ (左右, 上下) */
+    transform: translate(-46px, -2px); /* ⭐️ (左右, 上下) */
     font-size: 12px;                /* ⭐️ 單獨控制箭頭大小 */
 }
 .indicators .ind-up {
-	transform: translate(-42px, -1px); /* ⭐️ (左右, 上下) */
-	font-size: 14px;
+	transform: translate(-44px, -1px); /* ⭐️ (左右, 上下) */
+	font-size: 13px;
 }
 .indicators .ind-down {
-	transform: translate(-41px, -1px); /* ⭐️ (左右, 上下) */
-	font-size: 14px;
+	transform: translate(-42px, -1px); /* ⭐️ (左右, 上下) */
+	font-size: 13px;
 }
 .indicators .ind-right {
     transform: translate(-40px, -2px); /* ⭐️ (左右, 上下) */
@@ -171,7 +171,7 @@ math-field,
     color: inherit;
     padding: 0;
     width: 100%;
-    margin-top: 13px;
+    margin-top: 5px; /*輸入式上方距離*/
     touch-action: pan-y;
 }
 .expression.is-overflowing {
@@ -189,14 +189,14 @@ math-field,
 .result-viewport {
     width: 100%;
     margin-top: auto;
-    min-height: 52px;
+    min-height: 55px;
     position: relative;
     overflow: hidden !important;
     display: flex;
     align-items: flex-end;
     box-sizing: border-box;
     touch-action: pan-y;
-	padding-bottom: 2px;  /* ⭐️ 在此處加入：數值越大，結果離下緣越遠（越往上提） */
+	padding-bottom: 6px;  /*離下緣距離*/
 }
 .result-viewport.is-overflowing {
     cursor: grab;
@@ -286,7 +286,7 @@ math-field,
 .left-funcs, .right-funcs {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 8px 7.2px; /* 第一個數值是垂直排距 (row-gap)！ */
+    gap: 8px 3px; /*垂直 水平，淨距*/
     width: calc((100% - 76px - 14px) / 2);
 }
 
@@ -303,17 +303,17 @@ math-field,
     justify-content: space-between;
     align-items: center;
     width: 100%;
-    height: 13px;
-    font-size: 11px;
+    height: 13px; /*按鍵上方功能高度*/
+    font-size: 12px;  /*按鍵上方功能字高*/
     line-height: 13px;
     font-weight: bold;
-    padding: 0 1px;
+    padding: 0 0px;
     box-sizing: border-box;
     margin-bottom: 0.1px;
     user-select: none;
     pointer-events: none;
     overflow: hidden;
-    letter-spacing: -0.2px;
+    letter-spacing: -0.4px;
 }
 
 .labels-ran {
@@ -457,7 +457,7 @@ button[data-val="alpha"] {
 .sci-buttons {
     display: grid;
     grid-template-columns: repeat(6, minmax(0, 1fr));
-    gap: 7px 4.8px;    /* ⭐️ 垂直改為 7px（增加了 2 個排間距，共增加約 +6.8px） */
+    gap: 7px 4px;    /*垂直 水平*/
     margin-bottom: 1px;
 }
 
@@ -483,7 +483,7 @@ button[data-val="alpha"] {
 .num-buttons {
     display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 7.5px 6px;    /* ⭐️ 垂直改為 7.5px（增加了 4 個排間距，共增加約 +15.6px） */
+    gap: 7.5px 6px;    /*垂直 水平*/
 }
 
 .num-btn, .exp-btn, .ans-btn, .op-btn, .eq-btn {
@@ -528,7 +528,7 @@ button[data-val="alpha"] {
 
 .exp-btn { font-size: 16px; }
 
-/* 讓 MathLive 內部的容器不裁切，以便圖示可以往上移出邊界 */
+/* 讓 MathLive 內部的容器不裁切，以便圖示可以往上移出邊界，並確保頂部預留充足 padding 防止分式分子在手機端被裁切 */
 .expression {
     overflow: visible !important;
     contain: none !important;
@@ -536,6 +536,9 @@ button[data-val="alpha"] {
 .expression::part(container) {
     overflow: visible !important;
     contain: none !important;
+}
+.expression::part(content) {
+    padding-top: 6px !important;
 }
 
 /* 將圖示定位在 LED 螢幕頂部狀態列 (基準為 .screen)，並嚴格限制觸控範圍為 18px，防止侵入積分上限輸入格 */

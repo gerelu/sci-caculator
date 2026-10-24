@@ -420,7 +420,11 @@ const removeHighlightBackgrounds = () => {
                         overflow: visible !important;
                         will-change: transform;
                     }
-                    ` : ''}
+                    ` : `
+                    .ML__content {
+                        padding-top: 6px !important;
+                    }
+                    `}
                 `;
             }
         } catch(e) {}
