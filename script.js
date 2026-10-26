@@ -1925,8 +1925,8 @@ const evaluateExpression = () => {
                 } else {
                     const exactRows = solutions.map((s, idx) => `x_{${idx + 1}} = ${formatSol(s, false)}`);
                     const decimalRows = solutions.map((s, idx) => `x_{${idx + 1}} = ${formatSol(s, true)}`);
-                    lastExact = '\\begin{array}{l} ' + exactRows.join(' \\\\ ') + ' \\end{array}';
-                    lastDecimal = '\\begin{array}{l} ' + decimalRows.join(' \\\\ ') + ' \\end{array}';
+                    lastExact = '\\begin{array}{l} ' + exactRows.join(' \\\\[8px] ') + ' \\end{array}';
+                    lastDecimal = '\\begin{array}{l} ' + decimalRows.join(' \\\\[8px] ') + ' \\end{array}';
                     setMultiSolutionMode(true);
                 }
 
