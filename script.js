@@ -578,21 +578,28 @@ const removeHighlightBackgrounds = () => {
 
 // 螢幕指示標記更新
 const updateIndicators = () => {
-    const indSpans = document.querySelectorAll('.indicators span');
-    if (!indSpans || indSpans.length < 15) return;
-    indSpans[0].style.color = isShift ? '#FFD700' : 'transparent'; // Shift S: 金色
-    indSpans[1].style.color = isAlpha ? '#d83a48' : 'transparent'; // Alpha A: 紅色
-    indSpans[2].style.color = memoryVars.M !== 0 ? '#111' : 'transparent';
-    indSpans[3].style.color = isSto ? '#111' : 'transparent';
-    indSpans[4].style.color = isRcl ? '#111' : 'transparent';
-    const elD = document.getElementById('ind-d') || indSpans[9];
-    const elR = document.getElementById('ind-r') || indSpans[10];
-    const elG = document.getElementById('ind-g') || indSpans[11];
+    const elS = document.querySelector('.indicators .ind-s');
+    const elA = document.querySelector('.indicators .ind-a');
+    const elHyp = document.getElementById('ind-hyp') || document.querySelector('.indicators .ind-hyp');
+    const elM = document.getElementById('ind-m');
+    const elSto = document.getElementById('ind-sto');
+    const elRcl = document.getElementById('ind-rcl');
+
+    if (elS) elS.style.color = isShift ? '#FFD700' : 'transparent'; // Shift S: 金色
+    if (elA) elA.style.color = isAlpha ? '#d83a48' : 'transparent'; // Alpha A: 紅色
+    if (elHyp) elHyp.style.color = isHyp ? 'hsl(212, 40%, 49%)' : 'transparent'; // hyp h: 灰藍色
+    if (elM) elM.style.color = memoryVars.M !== 0 ? '#111' : 'transparent';
+    if (elSto) elSto.style.color = isSto ? '#111' : 'transparent';
+    if (elRcl) elRcl.style.color = isRcl ? '#111' : 'transparent';
+
+    const elD = document.getElementById('ind-d');
+    const elR = document.getElementById('ind-r');
+    const elG = document.getElementById('ind-g');
     if (elD) elD.style.color = angleMode === 'D' ? '#111' : 'transparent';
     if (elR) elR.style.color = angleMode === 'R' ? '#111' : 'transparent';
     if (elG) elG.style.color = angleMode === 'G' ? '#111' : 'transparent';
     const isMathActive = (defaultFormat === 'S');
-    const indMath = document.getElementById('ind-math') || indSpans[14];
+    const indMath = document.getElementById('ind-math');
     if (indMath) {
         indMath.style.color = isMathActive ? '#111' : 'rgba(17, 17, 17, 0.25)';
     }
@@ -2142,6 +2149,9 @@ document.querySelectorAll('.btn').forEach(btn => {
             };
             const varName = varMap[val];
             if (varName) {
+                if (!isEvaluated && mf && mf.value.trim() !== '') {
+                    evaluateExpression();
+                }
                 const saveVal = lastNumericVal !== null ? lastNumericVal : ansValue;
                 memoryVars[varName] = saveVal;
                 resultEl.value = '\\text{Ans} \\to ' + varName + ' = ' + saveVal;
@@ -2194,6 +2204,7 @@ document.querySelectorAll('.btn').forEach(btn => {
                 return;
             }
             isHyp = !isHyp;
+            updateIndicators();
             return;
         }
         if (val === 'vkey' || val === 'mode') {
@@ -2268,6 +2279,8 @@ document.querySelectorAll('.btn').forEach(btn => {
             preAnsExact = '0';
             xAnsValue = 0;
             xAnsExact = '0';
+            isHyp = false;
+            isAlpha = false;
             try {
                 localStorage.removeItem('casio_calc_xans_val');
                 localStorage.removeItem('casio_calc_xans_exact');
@@ -2306,11 +2319,12 @@ document.querySelectorAll('.btn').forEach(btn => {
                 updateIndicators();
                 return;
             }
+            const shiftActive = isShift;
             if (!isEvaluated) {
                 evaluateExpression();
             }
             const currentVal = lastNumericVal !== null ? lastNumericVal : ansValue;
-            if (isShift) {
+            if (shiftActive) {
                 memoryVars.M -= currentVal;
             } else {
                 memoryVars.M += currentVal;
@@ -2827,4 +2841,17 @@ const setupTogglesTooltip = () => {
 };
 setupTogglesTooltip();
 setupHistoryPanelEvents();
+
+// 點擊 LED 螢幕上的 M 指示符號可直接單獨清除獨立記憶體 M
+const elMIndicator = document.getElementById('ind-m');
+if (elMIndicator) {
+    elMIndicator.setAttribute('title', '獨立記憶體 M (點擊可單獨清除 / Click to clear M)');
+    elMIndicator.addEventListener('click', () => {
+        if (memoryVars.M !== 0) {
+            memoryVars.M = 0;
+            resultEl.value = 'M = 0';
+            updateIndicators();
+        }
+    });
+}
 
